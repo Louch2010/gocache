@@ -66,15 +66,16 @@ func (table *CacheTable) AddItem(key interface{}, item *CacheItem) *CacheItem {
 	//修改表属性
 	table.Lock()
 	old, ok := table.items[key]
-	//interval := table.cleanupInterval
 	now := time.Now()
+	interval := table.cleanupInterval
 	table.items[key] = item
 	table.accessCount++
 	table.lastAccessTime = now
 	table.lastModifyTime = now
-	//启动定时检查
+	//启动定时检查，条件为：该项设定了过期时间，并且过期时间小于间隔时间，或没有设置过间隔时间
+	//如果大于间隔时间，那么说明会有更早的定时会启动，此时无需再设定
 	liveTime := item.liveTime
-	if liveTime > 0 {
+	if liveTime > 0 && (interval == 0 || liveTime < interval) {
 		table.cleanupTimer = time.AfterFunc(liveTime, func() {
 			go table.expireCheck()
 		})
@@ -119,17 +120,17 @@ func (table *CacheTable) Get(key interface{}) *CacheItem {
 	//获取
 	table.RLock()
 	item, ok := table.items[key]
+	table.RUnlock()
 	if !ok {
 		log.Println("获取缓存项失败，缓存项不存在，表名：", table.name, "，键名：", key)
 		return nil
 	}
-	table.RUnlock()
 	log.Println("获取缓存项，表名：", table.name, "，键名：", key, "，值为：", item.value)
 	//修改表信息
 	table.Access()
 	//对过期的缓存项进行处理
 	now := time.Now()
-	if now.Sub(item.createTime) >= item.liveTime {
+	if item.liveTime > 0 && now.Sub(item.createTime) >= item.liveTime {
 		log.Println("获取缓存项失败，绑在已过期，表名：", table.name, "，键名：", key)
 		return nil
 	}
