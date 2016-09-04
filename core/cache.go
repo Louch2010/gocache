@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/louch2010/gocache/conf"
 	"github.com/louch2010/goutil"
 )
 
@@ -11,6 +12,23 @@ var (
 	cache = make(map[string]*CacheTable)
 	mutex sync.RWMutex
 )
+
+//初始化系统表
+func InitCache() error {
+	sysTable := conf.GetSystemConfig().MustValue("server", "sysTable", "sys")
+	defaultTable := conf.GetSystemConfig().MustValue("table", "default", "default")
+	_, err := Cache(sysTable)
+	if err != nil {
+		log.Println("初始化系统缓存表失败，表名：", sysTable)
+		return err
+	}
+	_, err = Cache(defaultTable)
+	if err != nil {
+		log.Println("初始化默认缓存表失败，表名：", defaultTable)
+		return err
+	}
+	return nil
+}
 
 //获取缓存表，如果不存在，则新建缓存表；存在则直接返回
 func Cache(table string) (*CacheTable, error) {
@@ -34,6 +52,7 @@ func Cache(table string) (*CacheTable, error) {
 
 //获取默认表，表名为
 func DefaultCache() *CacheTable {
-	t, _ := Cache(DEFAULT_TABLE_NAME)
+	defaultTable := conf.GetSystemConfig().MustValue("table", "default", "default")
+	t, _ := Cache(defaultTable)
 	return t
 }

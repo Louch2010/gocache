@@ -2,13 +2,11 @@ package server
 
 import (
 	"bufio"
+	"io"
 	"log"
 	"net"
 	"strconv"
-	"strings"
 	"time"
-
-	"github.com/louch2010/goutil"
 )
 
 //服务器运行状态标识
@@ -63,8 +61,9 @@ func handleShortConn(conn net.Conn, timeout int) {
 	buff := bufio.NewReader(conn)
 	line, _ := buff.ReadString('\n')
 	//解析请求并响应
-	response := ParserRequest(line)
+	response, _ := ParserRequest(line)
 	conn.Write([]byte(response))
+	log.Println("请求处理完成，响应内容为：", response)
 	conn.Close()
 }
 
@@ -85,16 +84,15 @@ func handleLongConn(conn net.Conn, timeout int) {
 		go heartBeating(conn, messnager, timeout)
 		//检测每次Client是否有数据传来
 		go gravelChannel(line, messnager)
-		//客户端主动退出
-		if REQUEST_TYPE_EXIT == strings.ToUpper(goutil.StringUtil().TrimToEmpty(line)) {
-			conn.Write([]byte("Bye~\r\n"))
-			conn.Close()
-			log.Println("客户端主动退出，请求处理完毕")
-			return
-		}
 		//解析请求并响应
-		response := ParserRequest(line)
-		conn.Write([]byte(response + "\r\n"))
+		response, clo := ParserRequest(line)
+		if clo {
+			io.WriteString(conn, response)
+			conn.Close()
+		} else {
+			io.WriteString(conn, response+"\r\n -> ")
+		}
+		log.Println("请求处理完成，响应内容为：", response)
 	}
 }
 

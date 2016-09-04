@@ -14,6 +14,12 @@ const (
 	REQUEST_TYPE_DELETE  = "DELETE"  //删除
 	REQUEST_TYPE_EXIST   = "EXIST"   //存在
 	REQUEST_TYPE_EVENT   = "EVENT"   //事件
+	REQUEST_TYPE_USE     = "USE"     //切换表
+	REQUEST_TYPE_SHOWT   = "SHOWT"   //显示表信息
+	REQUEST_TYPE_SHOWI   = "SHOWI"   //显示项信息
+	REQUEST_TYPE_INFO    = "INFO"    //显示系统信息
+	REQUEST_TYPE_HELP    = "HELP"    //帮助
+
 )
 
 //协议类型

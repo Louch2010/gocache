@@ -56,7 +56,7 @@ func (table *CacheTable) IsExist(key interface{}) bool {
 }
 
 //添加缓存项，如果已经存在，会返回原缓存项，如果不存在，则返回的是nil
-func (table *CacheTable) Add(key interface{}, value interface{}, liveTime time.Duration) *CacheItem {
+func (table *CacheTable) Set(key interface{}, value interface{}, liveTime time.Duration) *CacheItem {
 	item := NewCacheItem(key, value, liveTime)
 	return table.AddItem(key, item)
 }

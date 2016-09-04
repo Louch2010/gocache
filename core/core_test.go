@@ -18,10 +18,10 @@ func TestCache(t *testing.T) {
 func test(name string) {
 	table, _ := Cache(name)
 	//table := core.DefaultCache()
-	table.Add("name", "luociang", 3*time.Second)
-	table.Add("age", 26, 5*time.Second)
-	table.Add(110, "北京", 15*time.Second)
-	table.Add("home", "江西", 10*time.Second)
+	table.Set("name", "luociang", 3*time.Second)
+	table.Set("age", 26, 5*time.Second)
+	table.Set(110, "北京", 15*time.Second)
+	table.Set("home", "江西", 10*time.Second)
 
 	log.Println("-----------1秒后---------------")
 	time.Sleep(1 * time.Second)
@@ -45,7 +45,7 @@ func test(name string) {
 	table.Get("home")
 
 	log.Println("----------home重设值后----------------")
-	table.Add("home", "上饶", 0)
+	table.Set("home", "上饶", 0)
 	table.Get("name")
 	table.Get("age")
 	table.Get(110)
