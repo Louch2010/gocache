@@ -17,6 +17,14 @@ type CacheItem struct {
 	accessCount    int64         //访问次数
 }
 
+//获取值
+func (item *CacheItem) Value() interface{} {
+	item.RLock()
+	v := item.value
+	defer item.RUnlock()
+	return v
+}
+
 //访问
 func (item *CacheItem) Access() {
 	item.Lock()

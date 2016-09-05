@@ -1,9 +1,5 @@
 package server
 
-import (
-	"errors"
-)
-
 //请求类型
 const (
 	REQUEST_TYPE_PING    = "PING"    //心跳检测
@@ -19,7 +15,6 @@ const (
 	REQUEST_TYPE_SHOWI   = "SHOWI"   //显示项信息
 	REQUEST_TYPE_INFO    = "INFO"    //显示系统信息
 	REQUEST_TYPE_HELP    = "HELP"    //帮助
-
 )
 
 //协议类型
@@ -40,8 +35,12 @@ type Connect struct {
 
 //客户端
 type Client struct {
-	Connect
-	token string //令牌
+	host        string   //地址
+	port        int      //端口
+	table       string   //表名
+	listenEvent []string //侦听事件
+	protocol    string   //通讯协议
+	token       string   //令牌
 }
 
 //新增
@@ -93,8 +92,3 @@ type Event struct {
 	table     Table  //表
 	item      Item   //项
 }
-
-//异常
-var (
-	ERROR_SERVER_ALREADY_START = errors.New("server already start")
-)

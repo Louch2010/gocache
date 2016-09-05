@@ -123,15 +123,15 @@ port=1334
 password=
 maxPoolSize=10
 corePoolSize=5
-aliveTime=30
+aliveTime=3000
 sysTable=sys
+anonymCommnd=ping,connect,exit,help
 
 [table]
 default=default
 
 [client]
 connectType=long
-connectTimeout=30
 
 [dump]
 dir=./data

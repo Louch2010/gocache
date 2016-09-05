@@ -2,88 +2,117 @@ package server
 
 import (
 	"log"
-	"strconv"
 	"strings"
 
 	"github.com/louch2010/gocache/conf"
+	"github.com/louch2010/gocache/core"
 	"github.com/louch2010/goutil"
 )
 
 //解析请求
-func ParserRequest(request string) (string, bool) {
+func ParserRequest(request string, token string) (string, bool) {
 	//去除换行、空格
 	request = goutil.StringUtil().TrimToEmpty(request)
-	log.Println("开始处理请求，请求内容为：", request)
+	log.Println("开始处理请求，token：", token, "，请求内容为：", request)
 	//请求内容为空时，不处理
 	if goutil.StringUtil().IsEmpty(request) {
 		return "", false
 	}
 	arr := strings.SplitN(request, " ", 2)
-	head := goutil.StringUtil().TrimToEmpty(arr[0]) //请求头
-	body := ""                                      //请求体
+	head := strings.ToUpper(goutil.StringUtil().TrimToEmpty(arr[0])) //请求头
+	body := ""                                                       //请求体
 	if len(arr) == 2 {
 		body = goutil.StringUtil().TrimToEmpty(arr[1])
 	}
 	log.Println("请求头为：", head, "，请求体为：", body)
-	//解析
 	response := "" //响应内容
 	clo := false   //是否关闭
-	switch strings.ToUpper(head) {
+	//获取会话信息
+	client, isLogin := GetSession(token)
+	//未登录则强制先进行登录
+	if !isLogin && !IsAnonymCommnd(head) {
+		return ERROR_COMMND_NO_LOGIN.Error(), clo
+	}
+	log.Println("会话信息：", client)
+	//解析
+	switch head {
 	//心跳检测
 	case REQUEST_TYPE_PING:
-		response = "PONG"
+		response = MESSAGE_PONG
 		break
 	//查看帮助
 	case REQUEST_TYPE_HELP:
-		help := conf.GetHelpConfig()
-		if len(body) == 0 { //没有请求体，则显示所有命令名称
-			for index, sec := range help.GetSectionList() {
-				response += "[" + strconv.Itoa(index+1) + "] " + sec + "\r\n"
-			}
-			response += "use 'help commnd' to see detail info"
-		} else {
-			body = strings.ToLower(body)
-			sec, err := help.GetSection(body)
-			if err != nil {
-				response = "no help for the commnd"
-			} else {
-				response += "[" + body + "]\r\n"
-				for k, v := range sec {
-					response += k + ":" + v + "\r\n"
-				}
-			}
-		}
+		response = HandleHelpCommnd(body, client)
 		break
 	//退出
 	case REQUEST_TYPE_EXIT:
-		response = "Bye"
+		response = MESSAGE_EXIT
 		clo = true
+		DestroySession(token)
 		log.Println("客户端主动退出，请求处理完毕")
 		break
 	//打开连接
 	case REQUEST_TYPE_CONNECT:
-		response = "connect suc"
+		response = HandleConnectCommnd(body, token)
 		break
 	//新增
 	case REQUEST_TYPE_SET:
-		response = "set"
+		response = HandleSetCommnd(body, client)
 		break
 	//获取
 	case REQUEST_TYPE_GET:
-		response = "get"
+		response = HandleGetCommnd(body, client)
 		break
 	//删除
 	case REQUEST_TYPE_DELETE:
-		response = "delete"
+		response = HandleDeleteCommnd(body, client)
 		break
 	//是否存在
 	case REQUEST_TYPE_EXIST:
-		response = "exist"
+		response = HandleExistCommnd(body, client)
 		break
 	//命令不正确
 	default:
-		response = "commnd not found"
+		response = ERROR_COMMND_NOT_FOUND.Error()
 	}
-
 	return response, clo
+}
+
+//创建会话
+func CreateSession(token string, c Client) bool {
+	//缓存登录信息
+	table, _ := core.GetSysTable()
+	table.Set(token, c, 0)
+	//创建表信息
+	core.Cache(c.table)
+	return true
+}
+
+//获取会话
+func GetSession(token string) (Client, bool) {
+	table, _ := core.GetSysTable()
+	item := table.Get(token)
+	if item == nil {
+		return Client{}, false
+	}
+	value, falg := item.Value().(Client)
+	return value, falg
+}
+
+//销毁会话
+func DestroySession(token string) bool {
+	table, _ := core.GetSysTable()
+	return table.Delete(token)
+}
+
+//判断是否为免登录命令
+func IsAnonymCommnd(commnd string) bool {
+	anonymCommnd := conf.SystemConfigFile.MustValue("server", "anonymCommnd", "ping,connect,exit,help")
+	list := strings.Split(strings.ToUpper(anonymCommnd), ",")
+	for _, c := range list {
+		if commnd == c {
+			return true
+		}
+	}
+	return false
 }

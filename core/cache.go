@@ -13,7 +13,7 @@ var (
 	mutex sync.RWMutex
 )
 
-//初始化系统表
+//初始化缓存表
 func InitCache() error {
 	sysTable := conf.GetSystemConfig().MustValue("server", "sysTable", "sys")
 	defaultTable := conf.GetSystemConfig().MustValue("table", "default", "default")
@@ -28,6 +28,12 @@ func InitCache() error {
 		return err
 	}
 	return nil
+}
+
+//获取系统表
+func GetSysTable() (*CacheTable, error) {
+	sysTable := conf.GetSystemConfig().MustValue("server", "sysTable", "sys")
+	return Cache(sysTable)
 }
 
 //获取缓存表，如果不存在，则新建缓存表；存在则直接返回
