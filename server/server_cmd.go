@@ -8,6 +8,7 @@ import (
 
 	"github.com/louch2010/gocache/conf"
 	"github.com/louch2010/gocache/core"
+	"github.com/louch2010/goutil"
 )
 
 //帮助命令处理
@@ -101,6 +102,9 @@ func HandleConnectCommnd(body, token string) string {
 
 //Set命令处理
 func HandleSetCommnd(body string, client Client) string {
+	if len(body) == 0 {
+		return ERROR_COMMND_PARAM_ERROR.Error()
+	}
 	//参数处理
 	args := strings.Split(body, " ")
 	if len(args) < 2 || len(args) > 3 {
@@ -127,6 +131,9 @@ func HandleSetCommnd(body string, client Client) string {
 
 //Get命令处理
 func HandleGetCommnd(body string, client Client) string {
+	if len(body) == 0 {
+		return ERROR_COMMND_PARAM_ERROR.Error()
+	}
 	//参数处理
 	args := strings.Split(body, " ")
 	if len(args) != 1 {
@@ -146,6 +153,9 @@ func HandleGetCommnd(body string, client Client) string {
 
 //Delete命令处理
 func HandleDeleteCommnd(body string, client Client) string {
+	if len(body) == 0 {
+		return ERROR_COMMND_PARAM_ERROR.Error()
+	}
 	//参数处理
 	args := strings.Split(body, " ")
 	if len(args) != 1 {
@@ -164,6 +174,9 @@ func HandleDeleteCommnd(body string, client Client) string {
 
 //Exist命令处理
 func HandleExistCommnd(body string, client Client) string {
+	if len(body) == 0 {
+		return ERROR_COMMND_PARAM_ERROR.Error()
+	}
 	//参数处理
 	args := strings.Split(body, " ")
 	if len(args) != 1 {
@@ -178,4 +191,87 @@ func HandleExistCommnd(body string, client Client) string {
 		return MESSAGE_SUCCESS
 	}
 	return MESSAGE_ERROR
+}
+
+//切换表
+func HandleUseCommnd(body string, client Client) string {
+	if len(body) == 0 {
+		return ERROR_COMMND_PARAM_ERROR.Error()
+	}
+	client.table = body
+	if CreateSession(client.token, client) {
+		return MESSAGE_SUCCESS
+	}
+	return MESSAGE_ERROR
+}
+
+//显示表信息
+func HandleShowtCommnd(body string, client Client) string {
+	response := ""
+	if len(body) == 0 { //没有请求体，则显示所有表名
+		list := core.GetCacheTables()
+		index := 1
+		for k, _ := range list {
+			if k == client.table {
+				response += "[* " + strconv.Itoa(index) + "] "
+			} else {
+				response += "[" + strconv.Itoa(index) + "] "
+			}
+			response += k + "\r\n"
+			index += 1
+		}
+		response += "use 'showt tableName' to see detail info"
+	} else {
+		table, ok := core.GetCacheTable(body)
+		if !ok {
+			return ERROR_TABLE_NOT_EXIST.Error()
+		}
+		response += "name:" + table.Name() + "\r\n"
+		response += "itemCount: " + strconv.Itoa(table.ItemCount()) + "\r\n"
+		response += "createTime: " + goutil.DateUtil().TimeFullFormat(table.CreateTime()) + "\r\n"
+		response += "lastAccessTime: " + goutil.DateUtil().TimeFullFormat(table.LastAccessTime()) + "\r\n"
+		response += "lastModifyTime: " + goutil.DateUtil().TimeFullFormat(table.LastModifyTime()) + "\r\n"
+		response += "accessCount: " + strconv.FormatInt(table.AccessCount(), 10)
+	}
+	return response
+}
+
+//显示项信息
+func HandleShowiCommnd(body string, client Client) string {
+	response := ""
+	table, _ := core.Cache(client.table)
+	if len(body) == 0 { //没有请求体，则显示所有项
+		index := 1
+		for k, _ := range table.GetItems() {
+			response += "[" + strconv.Itoa(index) + "] " + k.(string) + "\r\n"
+			index += 1
+		}
+		response += "use 'showi key' to see detail info"
+	} else {
+		item := table.Get(body)
+		if item == nil {
+			return ERROR_ITEM_NOT_EXIST.Error()
+		}
+
+		//fmt.Fprintln(response, "key: ", item.Key())
+		//fmt.Fprintln(response, "value: ", item.Value())
+		response += "key: " + item.Key().(string) + "\r\n"
+		response += "value: " + item.Value().(string) + "\r\n"
+		response += "liveTime: " + item.LiveTime().String() + "\r\n"
+		response += "createTime: " + goutil.DateUtil().TimeFullFormat(item.CreateTime()) + "\r\n"
+		response += "lastAccessTime: " + goutil.DateUtil().TimeFullFormat(item.LastAccessTime()) + "\r\n"
+		response += "lastModifyTime: " + goutil.DateUtil().TimeFullFormat(item.LastModifyTime()) + "\r\n"
+		response += "accessCount: " + strconv.FormatInt(item.AccessCount(), 10) + "\r\n"
+	}
+	return response
+}
+
+//服务器信息
+func HandleInfoCommnd(body string, client Client) string {
+	info, _ := conf.GetSystemConfig().GetSection("")
+	response := ""
+	for k, v := range info {
+		response += k + ": " + v + "\r\n"
+	}
+	return response
 }

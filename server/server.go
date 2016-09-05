@@ -81,9 +81,9 @@ func handleLongConn(conn net.Conn, timeout int, token string) {
 		//只读取一行内容
 		line, err := buff.ReadString('\n')
 		if err != nil {
-			if err = io.EOF{
+			if err == io.EOF {
 				log.Println("连接已关闭！")
-			}else{
+			} else {
 				log.Println("读取连接内容失败！", err)
 			}
 			conn.Close()

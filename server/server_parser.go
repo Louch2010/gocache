@@ -71,6 +71,22 @@ func ParserRequest(request string, token string) (string, bool) {
 	case REQUEST_TYPE_EXIST:
 		response = HandleExistCommnd(body, client)
 		break
+	//切换表
+	case REQUEST_TYPE_USE:
+		response = HandleUseCommnd(body, client)
+		break
+	//显示表信息
+	case REQUEST_TYPE_SHOWT:
+		response = HandleShowtCommnd(body, client)
+		break
+	//显示项信息
+	case REQUEST_TYPE_SHOWI:
+		response = HandleShowiCommnd(body, client)
+		break
+	//服务器信息
+	case REQUEST_TYPE_INFO:
+		response = HandleInfoCommnd(body, client)
+		break
 	//命令不正确
 	default:
 		response = ERROR_COMMND_NOT_FOUND.Error()

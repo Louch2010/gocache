@@ -104,10 +104,10 @@ Desc=show system info
 Format=info
 [use]
 Desc=change cache table
-Format=use 'table name'
+Format=use [table name]
 [showt]
 Desc=show table info
-Format=showt 'table name'
+Format=showt [table name]
 [showi]
 Desc=show item info
 Format=showi 'item key'
@@ -125,13 +125,14 @@ maxPoolSize=10
 corePoolSize=5
 aliveTime=3000
 sysTable=sys
-anonymCommnd=ping,connect,exit,help
+anonymCommnd=ping,connect,exit,help,info
 
 [table]
 default=default
 
 [client]
 connectType=long
+openSession=true
 
 [dump]
 dir=./data

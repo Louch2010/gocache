@@ -26,11 +26,53 @@ type CacheTable struct {
 	endDumpToDiskCallBack     func(table *CacheTable)                                //完成写入硬盘回调
 }
 
+//表名
+func (table *CacheTable) Name() string {
+	table.RLock()
+	defer table.RUnlock()
+	return table.name
+}
+
+//创建时间
+func (table *CacheTable) CreateTime() time.Time {
+	table.RLock()
+	defer table.RUnlock()
+	return table.createTime
+}
+
+//最后访问时间
+func (table *CacheTable) LastAccessTime() time.Time {
+	table.RLock()
+	defer table.RUnlock()
+	return table.lastAccessTime
+}
+
+//最后修改时间
+func (table *CacheTable) LastModifyTime() time.Time {
+	table.RLock()
+	defer table.RUnlock()
+	return table.lastModifyTime
+}
+
+//访问次数
+func (table *CacheTable) AccessCount() int64 {
+	table.RLock()
+	defer table.RUnlock()
+	return table.accessCount
+}
+
 //获取缓存项数量
 func (table *CacheTable) ItemCount() int {
 	table.RLock()
 	defer table.RUnlock()
 	return len(table.items)
+}
+
+//获取所有缓存项
+func (table *CacheTable) GetItems() map[interface{}]*CacheItem {
+	table.RLock()
+	defer table.RUnlock()
+	return table.items
 }
 
 //访问表时更新表信息
@@ -85,6 +127,7 @@ func (table *CacheTable) AddItem(key interface{}, item *CacheItem) *CacheItem {
 	//调用回调函数
 	if ok {
 		table.itemEventCallBack(table, item, EVENT_ITEM_MODIFY)
+		item.Modify()
 	} else {
 		table.itemEventCallBack(table, item, EVENT_ITEM_ADD)
 	}
@@ -134,6 +177,7 @@ func (table *CacheTable) Get(key interface{}) *CacheItem {
 		log.Println("获取缓存项失败，绑在已过期，表名：", table.name, "，键名：", key)
 		return nil
 	}
+	item.Access()
 	return item
 }
 

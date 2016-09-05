@@ -36,6 +36,13 @@ func GetSysTable() (*CacheTable, error) {
 	return Cache(sysTable)
 }
 
+//获取默认表
+func DefaultCache() *CacheTable {
+	defaultTable := conf.GetSystemConfig().MustValue("table", "default", "default")
+	t, _ := Cache(defaultTable)
+	return t
+}
+
 //获取缓存表，如果不存在，则新建缓存表；存在则直接返回
 func Cache(table string) (*CacheTable, error) {
 	if goutil.StringUtil().IsEmpty(table) {
@@ -56,9 +63,18 @@ func Cache(table string) (*CacheTable, error) {
 	return t, nil
 }
 
-//获取默认表，表名为
-func DefaultCache() *CacheTable {
-	defaultTable := conf.GetSystemConfig().MustValue("table", "default", "default")
-	t, _ := Cache(defaultTable)
-	return t
+//获取缓存表
+func GetCacheTable(table string) (*CacheTable, bool) {
+	mutex.RLock()
+	t, ok := cache[table]
+	mutex.RUnlock()
+	return t, ok
+}
+
+//获取所有表
+func GetCacheTables() map[string]*CacheTable {
+	mutex.RLock()
+	list := cache
+	mutex.RUnlock()
+	return list
 }

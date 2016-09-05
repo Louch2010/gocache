@@ -17,6 +17,13 @@ type CacheItem struct {
 	accessCount    int64         //访问次数
 }
 
+//键
+func (item *CacheItem) Key() interface{} {
+	item.RLock()
+	defer item.RUnlock()
+	return item.key
+}
+
 //获取值
 func (item *CacheItem) Value() interface{} {
 	item.RLock()
@@ -25,13 +32,54 @@ func (item *CacheItem) Value() interface{} {
 	return v
 }
 
+//存活时间
+func (item *CacheItem) LiveTime() time.Duration {
+	item.RLock()
+	defer item.RUnlock()
+	return item.liveTime
+}
+
+//创建时间
+func (item *CacheItem) CreateTime() time.Time {
+	item.RLock()
+	defer item.RUnlock()
+	return item.createTime
+}
+
+//最后访问时间
+func (item *CacheItem) LastAccessTime() time.Time {
+	item.RLock()
+	defer item.RUnlock()
+	return item.lastAccessTime
+}
+
+//最后修改时间
+func (item *CacheItem) LastModifyTime() time.Time {
+	item.RLock()
+	defer item.RUnlock()
+	return item.lastModifyTime
+}
+
+//访问次数
+func (item *CacheItem) AccessCount() int64 {
+	item.RLock()
+	defer item.RUnlock()
+	return item.accessCount
+}
+
 //访问
 func (item *CacheItem) Access() {
 	item.Lock()
 	defer item.Unlock()
-	now := time.Now()
 	item.accessCount++
-	item.lastAccessTime = now
+	item.lastAccessTime = time.Now()
+}
+
+//修改
+func (item *CacheItem) Modify() {
+	item.Lock()
+	defer item.Unlock()
+	item.lastModifyTime = time.Now()
 }
 
 //新建Item
