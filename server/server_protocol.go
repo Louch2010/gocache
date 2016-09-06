@@ -24,6 +24,26 @@ const (
 	PROTOCOL_TERMINAL = "TERMINAL"
 )
 
+//响应信息
+type ServerRespMsg struct {
+	Code   string      //响应码
+	Data   interface{} //响应数据
+	Err    error       //错误信息
+	Clo    bool        //是否关闭
+	Client *Client     //客户端对象
+}
+
+func GetServerRespMsg(code string, data interface{}, err error, clo bool, client *Client) ServerRespMsg {
+	resp := ServerRespMsg{
+		Code:   code,
+		Data:   data,
+		Err:    err,
+		Clo:    clo,
+		Client: client,
+	}
+	return resp
+}
+
 //连接
 type Connect struct {
 	host        string   //地址

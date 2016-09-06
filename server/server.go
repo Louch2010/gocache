@@ -67,14 +67,16 @@ func handleShortConn(conn net.Conn, timeout int, token string) {
 	buff := bufio.NewReader(conn)
 	line, _ := buff.ReadString('\n')
 	//解析请求并响应
-	response, _ := ParserRequest(line, token)
-	conn.Write([]byte(response))
-	log.Println("请求处理完成，响应内容为：", response)
+	response := ParserRequest(line, token, Client{})
+	conn.Write([]byte(toString(response.Data)))
+	log.Println("请求处理完成，响应状态为：", response.Code, "响应内容为：", response.Data)
 	conn.Close()
 }
 
 //长连接处理
 func handleLongConn(conn net.Conn, timeout int, token string) {
+	//登录校验
+	client := Client{}
 	for {
 		//将请求内容写入buff
 		buff := bufio.NewReader(conn)
@@ -95,14 +97,27 @@ func handleLongConn(conn net.Conn, timeout int, token string) {
 		//检测每次Client是否有数据传来
 		go gravelChannel(line, manage)
 		//解析请求并响应
-		response, clo := ParserRequest(line, token)
-		if clo {
-			io.WriteString(conn, response)
+		response := ParserRequest(line, token, client)
+		data := ""
+		if response.Err != nil {
+			data = response.Err.Error()
+		} else {
+			data = toString(response.Data)
+			if len(data) == 0 {
+				data = response.Code
+			}
+			//将client进行缓存
+			if response.Client != nil {
+				client = *response.Client
+			}
+		}
+		if response.Clo {
+			io.WriteString(conn, data)
 			conn.Close()
 		} else {
-			io.WriteString(conn, response+"\r\n -> ")
+			io.WriteString(conn, data+"\r\n -> ")
 		}
-		log.Println("请求处理完成，响应内容为：", response)
+		log.Println("请求处理完成，响应状态为：", response.Code, "响应内容为：", data)
 	}
 }
 
@@ -121,4 +136,22 @@ func heartBeating(conn net.Conn, manage chan string, timeout int) {
 func gravelChannel(content string, manage chan string) {
 	manage <- content
 	close(manage)
+}
+
+//转string
+func toString(v interface{}) string {
+	response := ""
+	switch conv := v.(type) {
+	case string:
+		response = conv
+		break
+	case int:
+		response = strconv.Itoa(conv)
+		break
+	case *Item:
+		break
+	default:
+		log.Println("类型转换异常")
+	}
+	return response
 }

@@ -12,7 +12,7 @@ import (
 )
 
 //帮助命令处理
-func HandleHelpCommnd(body string, client Client) string {
+func HandleHelpCommnd(body string, client Client) ServerRespMsg {
 	response := ""
 	help := conf.GetHelpConfig()
 	if len(body) == 0 { //没有请求体，则显示所有命令名称
@@ -32,11 +32,11 @@ func HandleHelpCommnd(body string, client Client) string {
 			}
 		}
 	}
-	return response
+	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, false, &client)
 }
 
 //连接命令处理connect [-t'table'] [-a'pwd'] [-i'ip'] [-p'port'] [-e'e1,e2...']
-func HandleConnectCommnd(body, token string) string {
+func HandleConnectCommnd(body, token string) ServerRespMsg {
 	table := conf.GetSystemConfig().MustValue("table", "default", core.DEFAULT_TABLE_NAME)
 	var pwd, ip, port, event, protocol string
 	args := strings.Split(body, " ")
@@ -71,10 +71,10 @@ func HandleConnectCommnd(body, token string) string {
 	syspwd := conf.GetSystemConfig().MustValue("server", "password", "")
 	if len(syspwd) > 0 {
 		if len(pwd) == 0 {
-			return ERROR_AUTHORITY_NO_PWD.Error()
+			return GetServerRespMsg(MESSAGE_NO_PWD, "", ERROR_AUTHORITY_NO_PWD, false, nil)
 		}
 		if syspwd != pwd {
-			return ERROR_AUTHORITY_PWD_ERROR.Error()
+			return GetServerRespMsg(MESSAGE_PWD_ERROR, "", ERROR_AUTHORITY_PWD_ERROR, false, nil)
 		}
 	}
 	//端口校验
@@ -83,9 +83,9 @@ func HandleConnectCommnd(body, token string) string {
 		p, err := strconv.Atoi(port)
 		if err != nil {
 			log.Println("端口转换错误，", err)
-			return ERROR_PORT_ERROR.Error()
-			portInt = p
+			return GetServerRespMsg(MESSAGE_PORT_ERROR, "", ERROR_PORT_ERROR, false, nil)
 		}
+		portInt = p
 	}
 	//存储连接信息
 	client := Client{
@@ -97,25 +97,23 @@ func HandleConnectCommnd(body, token string) string {
 		token:       token,
 	}
 	CreateSession(token, client)
-	return MESSAGE_SUCCESS
+	return GetServerRespMsg(MESSAGE_SUCCESS, token, nil, false, &client)
 }
 
 //Set命令处理
-func HandleSetCommnd(body string, client Client) string {
-	if len(body) == 0 {
-		return ERROR_COMMND_PARAM_ERROR.Error()
+func HandleSetCommnd(body string, client Client) ServerRespMsg {
+	//请求体校验
+	resp, check := checkBody(body, 2, 3)
+	if !check {
+		return resp
 	}
-	//参数处理
 	args := strings.Split(body, " ")
-	if len(args) < 2 || len(args) > 3 {
-		return ERROR_COMMND_PARAM_ERROR.Error()
-	}
 	var liveTime int = 0
 	if len(args) == 3 {
 		t, err := strconv.Atoi(args[2])
 		if err != nil {
 			log.Println("参数转换错误，liveTime：", args[2], err)
-			return ERROR_COMMND_PARAM_ERROR.Error()
+			return GetServerRespMsg(MESSAGE_COMMND_PARAM_ERROR, "", ERROR_COMMND_PARAM_ERROR, false, &client)
 		}
 		liveTime = t
 	}
@@ -123,90 +121,83 @@ func HandleSetCommnd(body string, client Client) string {
 	table, err := core.Cache(client.table)
 	if err != nil {
 		log.Println("执行Set命令出错，获取表失败，表名：", client.table)
-		return MESSAGE_ERROR
+		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, false, &client)
 	}
-	table.Set(args[0], args[1], time.Duration(liveTime)*time.Second)
-	return MESSAGE_SUCCESS
+	item := table.Set(args[0], args[1], time.Duration(liveTime)*time.Second)
+	return GetServerRespMsg(MESSAGE_SUCCESS, item, nil, false, &client)
 }
 
 //Get命令处理
-func HandleGetCommnd(body string, client Client) string {
-	if len(body) == 0 {
-		return ERROR_COMMND_PARAM_ERROR.Error()
-	}
-	//参数处理
-	args := strings.Split(body, " ")
-	if len(args) != 1 {
-		return ERROR_COMMND_PARAM_ERROR.Error()
+func HandleGetCommnd(body string, client Client) ServerRespMsg {
+	//请求体校验
+	resp, check := checkBody(body, 1, 1)
+	if !check {
+		return resp
 	}
 	table, err := core.Cache(client.table)
 	if err != nil {
 		log.Println("执行Get命令出错，获取表失败，表名：", client.table)
-		return MESSAGE_ERROR
+		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, false, &client)
 	}
 	item := table.Get(body)
 	if item == nil {
-		return ERROR_ITEM_NOT_EXIST.Error()
+		return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, false, &client)
 	}
-	return item.Value().(string)
+	return GetServerRespMsg(MESSAGE_SUCCESS, item.Value(), nil, false, &client)
 }
 
 //Delete命令处理
-func HandleDeleteCommnd(body string, client Client) string {
-	if len(body) == 0 {
-		return ERROR_COMMND_PARAM_ERROR.Error()
-	}
-	//参数处理
-	args := strings.Split(body, " ")
-	if len(args) != 1 {
-		return ERROR_COMMND_PARAM_ERROR.Error()
+func HandleDeleteCommnd(body string, client Client) ServerRespMsg {
+	//请求体校验
+	resp, check := checkBody(body, 1, 1)
+	if !check {
+		return resp
 	}
 	table, err := core.Cache(client.table)
 	if err != nil {
 		log.Println("执行Delete命令出错，获取表失败，表名：", client.table)
-		return MESSAGE_ERROR
+		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, false, &client)
 	}
 	if table.Delete(body) {
-		return MESSAGE_SUCCESS
+		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, false, &client)
 	}
-	return MESSAGE_ERROR
+	return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, false, &client)
 }
 
 //Exist命令处理
-func HandleExistCommnd(body string, client Client) string {
-	if len(body) == 0 {
-		return ERROR_COMMND_PARAM_ERROR.Error()
-	}
-	//参数处理
-	args := strings.Split(body, " ")
-	if len(args) != 1 {
-		return ERROR_COMMND_PARAM_ERROR.Error()
+func HandleExistCommnd(body string, client Client) ServerRespMsg {
+	//请求体校验
+	resp, check := checkBody(body, 1, 1)
+	if !check {
+		return resp
 	}
 	table, err := core.Cache(client.table)
 	if err != nil {
 		log.Println("执行Exist命令出错，获取表失败，表名：", client.table)
-		return MESSAGE_ERROR
+		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, false, &client)
 	}
 	if table.IsExist(body) {
-		return MESSAGE_SUCCESS
+		return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, false, &client)
 	}
-	return MESSAGE_ERROR
+	return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, false, &client)
 }
 
 //切换表
-func HandleUseCommnd(body string, client Client) string {
-	if len(body) == 0 {
-		return ERROR_COMMND_PARAM_ERROR.Error()
+func HandleUseCommnd(body string, client Client) ServerRespMsg {
+	//请求体校验
+	resp, check := checkBody(body, 1, 1)
+	if !check {
+		return resp
 	}
 	client.table = body
 	if CreateSession(client.token, client) {
-		return MESSAGE_SUCCESS
+		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, false, &client)
 	}
-	return MESSAGE_ERROR
+	return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, false, &client)
 }
 
 //显示表信息
-func HandleShowtCommnd(body string, client Client) string {
+func HandleShowtCommnd(body string, client Client) ServerRespMsg {
 	response := ""
 	if len(body) == 0 { //没有请求体，则显示所有表名
 		list := core.GetCacheTables()
@@ -224,7 +215,7 @@ func HandleShowtCommnd(body string, client Client) string {
 	} else {
 		table, ok := core.GetCacheTable(body)
 		if !ok {
-			return ERROR_TABLE_NOT_EXIST.Error()
+			return GetServerRespMsg(MESSAGE_TABLE_NOT_EXIST, response, ERROR_TABLE_NOT_EXIST, false, &client)
 		}
 		response += "name:" + table.Name() + "\r\n"
 		response += "itemCount: " + strconv.Itoa(table.ItemCount()) + "\r\n"
@@ -233,11 +224,11 @@ func HandleShowtCommnd(body string, client Client) string {
 		response += "lastModifyTime: " + goutil.DateUtil().TimeFullFormat(table.LastModifyTime()) + "\r\n"
 		response += "accessCount: " + strconv.FormatInt(table.AccessCount(), 10)
 	}
-	return response
+	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, false, &client)
 }
 
 //显示项信息
-func HandleShowiCommnd(body string, client Client) string {
+func HandleShowiCommnd(body string, client Client) ServerRespMsg {
 	response := ""
 	table, _ := core.Cache(client.table)
 	if len(body) == 0 { //没有请求体，则显示所有项
@@ -250,11 +241,8 @@ func HandleShowiCommnd(body string, client Client) string {
 	} else {
 		item := table.Get(body)
 		if item == nil {
-			return ERROR_ITEM_NOT_EXIST.Error()
+			return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, false, &client)
 		}
-
-		//fmt.Fprintln(response, "key: ", item.Key())
-		//fmt.Fprintln(response, "value: ", item.Value())
 		response += "key: " + item.Key().(string) + "\r\n"
 		response += "value: " + item.Value().(string) + "\r\n"
 		response += "liveTime: " + item.LiveTime().String() + "\r\n"
@@ -263,15 +251,28 @@ func HandleShowiCommnd(body string, client Client) string {
 		response += "lastModifyTime: " + goutil.DateUtil().TimeFullFormat(item.LastModifyTime()) + "\r\n"
 		response += "accessCount: " + strconv.FormatInt(item.AccessCount(), 10) + "\r\n"
 	}
-	return response
+	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, false, &client)
 }
 
 //服务器信息
-func HandleInfoCommnd(body string, client Client) string {
+func HandleInfoCommnd(body string, client Client) ServerRespMsg {
 	info, _ := conf.GetSystemConfig().GetSection("")
 	response := ""
 	for k, v := range info {
 		response += k + ": " + v + "\r\n"
 	}
-	return response
+	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, false, &client)
+}
+
+//请求体检查
+func checkBody(body string, minBodyLen int, maxBodyLen int) (ServerRespMsg, bool) {
+	if len(body) == 0 && minBodyLen != 0 {
+		return GetServerRespMsg(MESSAGE_COMMND_PARAM_ERROR, "", ERROR_COMMND_PARAM_ERROR, false, nil), false
+	}
+	//参数处理
+	args := strings.Split(body, " ")
+	if len(args) < minBodyLen || len(args) > maxBodyLen {
+		return GetServerRespMsg(MESSAGE_COMMND_PARAM_ERROR, "", ERROR_COMMND_PARAM_ERROR, false, nil), false
+	}
+	return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, false, nil), true
 }

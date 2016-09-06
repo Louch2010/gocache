@@ -10,13 +10,13 @@ import (
 )
 
 //解析请求
-func ParserRequest(request string, token string) (string, bool) {
+func ParserRequest(request string, token string, client Client) ServerRespMsg {
 	//去除换行、空格
 	request = goutil.StringUtil().TrimToEmpty(request)
 	log.Println("开始处理请求，token：", token, "，请求内容为：", request)
 	//请求内容为空时，不处理
 	if goutil.StringUtil().IsEmpty(request) {
-		return "", false
+		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, false, nil)
 	}
 	arr := strings.SplitN(request, " ", 2)
 	head := strings.ToUpper(goutil.StringUtil().TrimToEmpty(arr[0])) //请求头
@@ -25,16 +25,20 @@ func ParserRequest(request string, token string) (string, bool) {
 		body = goutil.StringUtil().TrimToEmpty(arr[1])
 	}
 	log.Println("请求头为：", head, "，请求体为：", body)
-	response := "" //响应内容
-	clo := false   //是否关闭
+	var response ServerRespMsg //响应内容
 	//会话信息校验
 	openSession := conf.GetSystemConfig().MustBool("client", "openSession", true)
-	client, isLogin := GetSession(token)
+	isLogin := false
+	if len(client.token) > 0 {
+		isLogin = true
+	} else {
+		client, isLogin = GetSession(token)
+	}
 	//没有登录
 	if !isLogin {
 		//需要登录，而且也不是免登录的命令
 		if openSession && !IsAnonymCommnd(head) {
-			return ERROR_COMMND_NO_LOGIN.Error(), clo
+			return GetServerRespMsg(MESSAGE_COMMND_NO_LOGIN, "", ERROR_COMMND_NO_LOGIN, false, nil)
 		}
 		//模拟登录
 		if !openSession {
@@ -50,7 +54,7 @@ func ParserRequest(request string, token string) (string, bool) {
 	switch head {
 	//心跳检测
 	case REQUEST_TYPE_PING:
-		response = MESSAGE_PONG
+		response = GetServerRespMsg(MESSAGE_SUCCESS, MESSAGE_PONG, nil, false, &client)
 		break
 	//查看帮助
 	case REQUEST_TYPE_HELP:
@@ -58,8 +62,7 @@ func ParserRequest(request string, token string) (string, bool) {
 		break
 	//退出
 	case REQUEST_TYPE_EXIT:
-		response = MESSAGE_EXIT
-		clo = true
+		response = GetServerRespMsg(MESSAGE_SUCCESS, "", nil, true, &client)
 		DestroySession(token)
 		log.Println("客户端主动退出，请求处理完毕")
 		break
@@ -101,9 +104,9 @@ func ParserRequest(request string, token string) (string, bool) {
 		break
 	//命令不正确
 	default:
-		response = ERROR_COMMND_NOT_FOUND.Error()
+		response = GetServerRespMsg(MESSAGE_COMMND_NOT_FOUND, "", ERROR_COMMND_NOT_FOUND, false, &client)
 	}
-	return response, clo
+	return response
 }
 
 //创建会话
