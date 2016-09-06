@@ -73,6 +73,31 @@ func GetSystemConfig() *goconfig.ConfigFile {
 	return SystemConfigFile
 }
 
+//获取日志配置
+func GetLogConfig(level string, format string, path string, roll string, consoleOn bool) string {
+	config := `
+	<seelog>
+	    <outputs formatid="main">`
+	if consoleOn {
+		config += `
+			<filter levels="` + level + `">
+	        	<console />
+	    	</filter>
+		`
+	}
+	config += `
+			<filter levels="` + level + `">
+				<rollingfile type="date" filename="` + path + `" datepattern="` + roll + `" maxrolls="7" />
+	        </filter>
+	    </outputs>
+	    <formats>
+	        <format id="main" format="` + format + `"/>
+	    </formats>
+	</seelog>
+	`
+	return config
+}
+
 //帮助
 const CONFIG_HELP_CONTENT_EN = `
 [connect]
@@ -118,28 +143,49 @@ const CONFIG_SYSTEM_DEFAULT = `
 appname=gocache
 version=1.0
 author=luocihang@126.com
+
 [server]
+#server port
 port=1334
+#connect password
 password=
+#max size for connect pool
 maxPoolSize=10
+#core size for connect pool
 corePoolSize=5
+#connect alive time, unit is second
 aliveTime=3000
+#system table use to cache connection info
 sysTable=sys
+#the commnds which could be execute without login
 anonymCommnd=ping,connect,exit,help,info
 
 [table]
+#default table name. if client connect server without assign table name or 'openSession' is false, 
+#use this name as default table name
 default=default
 
 [client]
+#client connect type: long|short
 connectType=long
+#open session: true|false
 openSession=true
 
 [dump]
+#dump file directory
 dir=./data
+#dump file name extension
 ext=.dmp
 
-
 [log]
-level=debug
-dir=./log
+#log level: trace|debug|info|critical|warn|error
+level = trace
+#use console log: true|false
+console.on=true
+#log format
+format=%Date %Time [%LEV] %Msg%n
+#log file path
+path=./log/gocache.log
+#
+roll=02.01.2006
 `

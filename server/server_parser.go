@@ -27,11 +27,23 @@ func ParserRequest(request string, token string) (string, bool) {
 	log.Println("请求头为：", head, "，请求体为：", body)
 	response := "" //响应内容
 	clo := false   //是否关闭
-	//获取会话信息
+	//会话信息校验
+	openSession := conf.GetSystemConfig().MustBool("client", "openSession", true)
 	client, isLogin := GetSession(token)
-	//未登录则强制先进行登录
-	if !isLogin && !IsAnonymCommnd(head) {
-		return ERROR_COMMND_NO_LOGIN.Error(), clo
+	//没有登录
+	if !isLogin {
+		//需要登录，而且也不是免登录的命令
+		if openSession && !IsAnonymCommnd(head) {
+			return ERROR_COMMND_NO_LOGIN.Error(), clo
+		}
+		//模拟登录
+		if !openSession {
+			table := conf.GetSystemConfig().MustValue("table", "default", core.DEFAULT_TABLE_NAME)
+			client = Client{
+				table: table,
+				token: token,
+			}
+		}
 	}
 	log.Println("会话信息：", client)
 	//解析
