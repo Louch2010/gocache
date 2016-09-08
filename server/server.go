@@ -6,7 +6,6 @@ import (
 	"io"
 	"math/rand"
 	"net"
-	"reflect"
 	"strconv"
 	"time"
 
@@ -68,10 +67,10 @@ func handleShortConn(conn net.Conn, timeout int, token string) {
 	conn.SetDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
 	//将请求读入缓存，并读取其中的一行
 	buff := bufio.NewReader(conn)
-	line, _ := buff.ReadString('\n')
+	line, _ := buff.ReadString(FLAG_CHAR_SOCKET_COMMND_START)
 	//解析请求并响应
 	response := ParserRequest(line, token, Client{})
-	conn.Write([]byte(toString(response.Data)))
+	conn.Write([]byte(toString(response.Data) + string(FLAG_CHAR_SOCKET_COMMND_END)))
 	log.Debug("请求处理完成，响应状态为：", response.Code, "响应内容为：", response.Data)
 	conn.Close()
 }
@@ -85,7 +84,7 @@ func handleLongConn(conn net.Conn, timeout int, token string) {
 		//将请求内容写入buff
 		buff := bufio.NewReader(conn)
 		//只读取一行内容
-		line, err := buff.ReadString('\n')
+		line, err := buff.ReadString(FLAG_CHAR_SOCKET_COMMND_START)
 		if err != nil {
 			if err == io.EOF {
 				log.Info("连接已关闭！")
@@ -119,7 +118,7 @@ func handleLongConn(conn net.Conn, timeout int, token string) {
 			io.WriteString(conn, data)
 			conn.Close()
 		} else {
-			io.WriteString(conn, data+"\r\n -> ")
+			io.WriteString(conn, data+FLAG_CHAR_SOCKET_COMMND_END)
 		}
 		log.Debug("请求处理完成，响应状态为：", response.Code, "响应内容为：", data)
 	}

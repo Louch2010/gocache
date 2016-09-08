@@ -24,6 +24,12 @@ const (
 	PROTOCOL_TERMINAL = "TERMINAL"
 )
 
+//标识字符
+const (
+	FLAG_CHAR_SOCKET_COMMND_START = '\n'
+	FLAG_CHAR_SOCKET_COMMND_END   = "\r\n ->"
+)
+
 //响应信息
 type ServerRespMsg struct {
 	Code   string      //响应码
