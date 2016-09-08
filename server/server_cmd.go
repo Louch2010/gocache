@@ -1,13 +1,13 @@
 package server
 
 import (
-	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/louch2010/gocache/conf"
 	"github.com/louch2010/gocache/core"
+	"github.com/louch2010/gocache/log"
 	"github.com/louch2010/goutil"
 )
 
@@ -82,7 +82,7 @@ func HandleConnectCommnd(body, token string) ServerRespMsg {
 	if len(port) > 0 {
 		p, err := strconv.Atoi(port)
 		if err != nil {
-			log.Println("端口转换错误，", err)
+			log.Info("端口转换错误，", err)
 			return GetServerRespMsg(MESSAGE_PORT_ERROR, "", ERROR_PORT_ERROR, false, nil)
 		}
 		portInt = p
@@ -112,7 +112,7 @@ func HandleSetCommnd(body string, client Client) ServerRespMsg {
 	if len(args) == 3 {
 		t, err := strconv.Atoi(args[2])
 		if err != nil {
-			log.Println("参数转换错误，liveTime：", args[2], err)
+			log.Info("参数转换错误，liveTime：", args[2], err)
 			return GetServerRespMsg(MESSAGE_COMMND_PARAM_ERROR, "", ERROR_COMMND_PARAM_ERROR, false, &client)
 		}
 		liveTime = t
@@ -120,7 +120,7 @@ func HandleSetCommnd(body string, client Client) ServerRespMsg {
 	//增加缓存项
 	table, err := core.Cache(client.table)
 	if err != nil {
-		log.Println("执行Set命令出错，获取表失败，表名：", client.table)
+		log.Error("执行Set命令出错，获取表失败，表名：", client.table)
 		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, false, &client)
 	}
 	item := table.Set(args[0], args[1], time.Duration(liveTime)*time.Second)
@@ -136,7 +136,7 @@ func HandleGetCommnd(body string, client Client) ServerRespMsg {
 	}
 	table, err := core.Cache(client.table)
 	if err != nil {
-		log.Println("执行Get命令出错，获取表失败，表名：", client.table)
+		log.Error("执行Get命令出错，获取表失败，表名：", client.table)
 		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, false, &client)
 	}
 	item := table.Get(body)
@@ -155,7 +155,7 @@ func HandleDeleteCommnd(body string, client Client) ServerRespMsg {
 	}
 	table, err := core.Cache(client.table)
 	if err != nil {
-		log.Println("执行Delete命令出错，获取表失败，表名：", client.table)
+		log.Error("执行Delete命令出错，获取表失败，表名：", client.table)
 		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, false, &client)
 	}
 	if table.Delete(body) {
@@ -173,7 +173,7 @@ func HandleExistCommnd(body string, client Client) ServerRespMsg {
 	}
 	table, err := core.Cache(client.table)
 	if err != nil {
-		log.Println("执行Exist命令出错，获取表失败，表名：", client.table)
+		log.Error("执行Exist命令出错，获取表失败，表名：", client.table)
 		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, false, &client)
 	}
 	if table.IsExist(body) {

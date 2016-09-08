@@ -1,11 +1,11 @@
 package server
 
 import (
-	"log"
 	"strings"
 
 	"github.com/louch2010/gocache/conf"
 	"github.com/louch2010/gocache/core"
+	"github.com/louch2010/gocache/log"
 	"github.com/louch2010/goutil"
 )
 
@@ -13,7 +13,7 @@ import (
 func ParserRequest(request string, token string, client Client) ServerRespMsg {
 	//去除换行、空格
 	request = goutil.StringUtil().TrimToEmpty(request)
-	log.Println("开始处理请求，token：", token, "，请求内容为：", request)
+	log.Debug("开始处理请求，token：", token, "，请求内容为：", request)
 	//请求内容为空时，不处理
 	if goutil.StringUtil().IsEmpty(request) {
 		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, false, nil)
@@ -24,7 +24,7 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 	if len(arr) == 2 {
 		body = goutil.StringUtil().TrimToEmpty(arr[1])
 	}
-	log.Println("请求头为：", head, "，请求体为：", body)
+	log.Debug("请求头为：", head, "，请求体为：", body)
 	var response ServerRespMsg //响应内容
 	//会话信息校验
 	openSession := conf.GetSystemConfig().MustBool("client", "openSession", true)
@@ -49,7 +49,7 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 			}
 		}
 	}
-	log.Println("会话信息：", client)
+	log.Debug("会话信息：", client)
 	//解析
 	switch head {
 	//心跳检测
@@ -64,7 +64,7 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 	case REQUEST_TYPE_EXIT:
 		response = GetServerRespMsg(MESSAGE_SUCCESS, "", nil, true, &client)
 		DestroySession(token)
-		log.Println("客户端主动退出，请求处理完毕")
+		log.Debug("客户端主动退出，请求处理完毕")
 		break
 	//打开连接
 	case REQUEST_TYPE_CONNECT:

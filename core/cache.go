@@ -1,10 +1,10 @@
 package core
 
 import (
-	"log"
 	"sync"
 
 	"github.com/louch2010/gocache/conf"
+	"github.com/louch2010/gocache/log"
 	"github.com/louch2010/goutil"
 )
 
@@ -19,12 +19,12 @@ func InitCache() error {
 	defaultTable := conf.GetSystemConfig().MustValue("table", "default", "default")
 	_, err := Cache(sysTable)
 	if err != nil {
-		log.Println("初始化系统缓存表失败，表名：", sysTable)
+		log.Error("初始化系统缓存表失败，表名：", sysTable)
 		return err
 	}
 	_, err = Cache(defaultTable)
 	if err != nil {
-		log.Println("初始化默认缓存表失败，表名：", defaultTable)
+		log.Error("初始化默认缓存表失败，表名：", defaultTable)
 		return err
 	}
 	return nil
@@ -52,7 +52,7 @@ func Cache(table string) (*CacheTable, error) {
 	t, ok := cache[table]
 	mutex.RUnlock()
 	if !ok {
-		log.Println("缓存表不存在，新建缓存表，表名为：", table)
+		log.Info("缓存表不存在，新建缓存表，表名为：", table)
 		t = NewCacheTable(table)
 		mutex.Lock()
 		cache[table] = t

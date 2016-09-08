@@ -1,10 +1,11 @@
 package core
 
 import (
-	"log"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/louch2010/gocache/log"
 )
 
 //缓存表，缓存服务器中包含多个缓存表，name作为唯一标识
@@ -91,7 +92,7 @@ func (table *CacheTable) IsExist(key interface{}) bool {
 	table.RLock()
 	_, ok := table.items[key]
 	table.RUnlock()
-	log.Println("查询键是否存在，表名：", table.name, "键为：", key, "，结果：", ok)
+	log.Debug("查询键是否存在，表名：", table.name, "键为：", key, "，结果：", ok)
 	//更新表信息
 	table.Access()
 	return ok
@@ -123,7 +124,7 @@ func (table *CacheTable) AddItem(key interface{}, item *CacheItem) *CacheItem {
 		})
 	}
 	table.Unlock()
-	log.Println("新增缓存项，键：", key, "，值：", item.value, "，原来是否存在：", ok)
+	log.Debug("新增缓存项，键：", key, "，值：", item.value, "，原来是否存在：", ok)
 	//调用回调函数
 	if ok {
 		table.itemEventCallBack(table, item, EVENT_ITEM_MODIFY)
@@ -148,12 +149,12 @@ func (table *CacheTable) Delete(key interface{}) bool {
 		table.lastAccessTime = now
 		table.lastModifyTime = now
 		table.Unlock()
-		log.Println("删除缓存项，删除成功，表名：", table.name, "，键名：", key)
+		log.Debug("删除缓存项，删除成功，表名：", table.name, "，键名：", key)
 		//回调通知
 		table.itemEventCallBack(table, item, EVENT_ITEM_DELETE)
 		return true
 	} else {
-		log.Println("删除缓存项，缓存项不存在，删除失败，表名：", table.name, "，键名：", key)
+		log.Error("删除缓存项，缓存项不存在，删除失败，表名：", table.name, "，键名：", key)
 		return false
 	}
 }
@@ -165,16 +166,16 @@ func (table *CacheTable) Get(key interface{}) *CacheItem {
 	item, ok := table.items[key]
 	table.RUnlock()
 	if !ok {
-		log.Println("获取缓存项失败，缓存项不存在，表名：", table.name, "，键名：", key)
+		log.Info("获取缓存项失败，缓存项不存在，表名：", table.name, "，键名：", key)
 		return nil
 	}
-	log.Println("获取缓存项，表名：", table.name, "，键名：", key, "，值为：", item.value)
+	log.Debug("获取缓存项，表名：", table.name, "，键名：", key, "，值为：", item.value)
 	//修改表信息
 	table.Access()
 	//对过期的缓存项进行处理
 	now := time.Now()
 	if item.liveTime > 0 && now.Sub(item.createTime) >= item.liveTime {
-		log.Println("获取缓存项失败，绑在已过期，表名：", table.name, "，键名：", key)
+		log.Info("获取缓存项失败，绑在已过期，表名：", table.name, "，键名：", key)
 		return nil
 	}
 	item.Access()
@@ -225,7 +226,7 @@ func (table *CacheTable) SetEndDumpToDiskCallBack(f func(table *CacheTable)) {
 
 //过期检查
 func (table *CacheTable) expireCheck() {
-	log.Println("准备启动过期检查，表名：", table.name)
+	log.Debug("准备启动过期检查，表名：", table.name)
 	table.Lock()
 	//已经在执行，那么就先停止定时
 	if table.cleanupTimer != nil {
@@ -233,7 +234,7 @@ func (table *CacheTable) expireCheck() {
 	}
 	items := table.items
 	table.Unlock()
-	log.Println("----开始启动过期检查，表名：", table.name, "，表容量：", strconv.Itoa(len(items)))
+	log.Debug("----开始启动过期检查，表名：", table.name, "，表容量：", strconv.Itoa(len(items)))
 	//遍历
 	now := time.Now()
 	interval := 0 * time.Second
@@ -266,7 +267,7 @@ func (table *CacheTable) expireCheck() {
 		})
 	}
 	table.Unlock()
-	log.Println("----过期检查结束，表名：", table.name, "，耗时：", strconv.FormatInt(time.Now().Unix()-now.Unix(), 10))
+	log.Debug("----过期检查结束，表名：", table.name, "，耗时：", strconv.FormatInt(time.Now().Unix()-now.Unix(), 10))
 }
 
 //新建缓存表
@@ -282,22 +283,22 @@ func NewCacheTable(name string) *CacheTable {
 		cleanupTimer:    nil,
 		cleanupInterval: 0,
 		itemEventCallBack: func(table *CacheTable, item *CacheItem, event string) {
-			log.Println("缓存项事件回调...事件类型：", event)
+			log.Debug("缓存项事件回调...事件类型：", event)
 		},
 		tableEventCallBack: func(table *CacheTable, event string) {
-			log.Println("缓存表事件回调...事件类型：", event)
+			log.Debug("缓存表事件回调...事件类型：", event)
 		},
 		startLoadFromDiskCallBack: func(table *CacheTable) {
-			log.Println("开始从硬盘加载回调...")
+			log.Debug("开始从硬盘加载回调...")
 		},
 		endLoadFromDiskCallBack: func(table *CacheTable) {
-			log.Println("完成从硬盘加载回调...")
+			log.Debug("完成从硬盘加载回调...")
 		},
 		startDumpToDiskCallBack: func(table *CacheTable) {
-			log.Println("开始写入硬盘回调...")
+			log.Debug("开始写入硬盘回调...")
 		},
 		endDumpToDiskCallBack: func(table *CacheTable) {
-			log.Println("完成写入硬盘回调...")
+			log.Debug("完成写入硬盘回调...")
 		},
 	}
 	return &table

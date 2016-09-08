@@ -2,13 +2,16 @@ package server
 
 import (
 	"bufio"
+	"encoding/json"
 	"io"
-	"log"
 	"math/rand"
 	"net"
+	"reflect"
 	"strconv"
 	"time"
 
+	"github.com/louch2010/gocache/core"
+	"github.com/louch2010/gocache/log"
 	"github.com/louch2010/goutil"
 )
 
@@ -18,22 +21,21 @@ var ServerStatusFlag bool = false
 //启动服务
 func Start(port int, timeout int) error {
 	if ServerStatusFlag {
-		log.Println("服务已经在运行，无需再次启动")
+		log.Error("服务已经在运行，无需再次启动")
 		return ERROR_SERVER_ALREADY_START
 	}
 	ServerStatusFlag = true
-	log.Println("启动服务，端口号：", port, "，连接超时时间：", timeout)
+	log.Info("启动服务，端口号：", port, "，连接超时时间：", timeout)
 	//定义端口地址
-	host := ":" + strconv.Itoa(port)
-	addr, err := net.ResolveTCPAddr("tcp4", host)
+	addr, err := net.ResolveTCPAddr("tcp4", ":"+strconv.Itoa(port))
 	if err != nil {
-		log.Println("TCP地址初始化失败！", err)
+		log.Error("TCP地址初始化失败！", err)
 		return err
 	}
 	//启动端口侦听
 	listener, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		log.Println("启动端口侦听失败！", err)
+		log.Error("启动端口侦听失败！", err)
 		return err
 	}
 	for ServerStatusFlag {
@@ -42,26 +44,27 @@ func Start(port int, timeout int) error {
 		//生成唯一token
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		token := goutil.DateUtil().Time14Now() + strconv.Itoa(r.Int())
-		log.Println("接收到请求，token：", token)
+		log.Info("接收到请求，token：", token)
 		if err != nil {
-			log.Println("接收请求时出错！", err)
+			log.Error("接收请求时出错！", err)
+			continue
 		}
 		//使用长连接方式处理
 		go handleLongConn(conn, timeout, token)
 	}
-	log.Println("服务停止完成！")
+	log.Info("服务已停止！")
 	return nil
 }
 
 //停止服务
 func Stop() {
-	log.Println("停止服务...")
+	log.Info("停止服务...")
 	ServerStatusFlag = false
 }
 
 //短连接处理
 func handleShortConn(conn net.Conn, timeout int, token string) {
-	log.Println("开始处理请求...")
+	log.Debug("开始处理短连接请求...")
 	conn.SetDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
 	//将请求读入缓存，并读取其中的一行
 	buff := bufio.NewReader(conn)
@@ -69,13 +72,14 @@ func handleShortConn(conn net.Conn, timeout int, token string) {
 	//解析请求并响应
 	response := ParserRequest(line, token, Client{})
 	conn.Write([]byte(toString(response.Data)))
-	log.Println("请求处理完成，响应状态为：", response.Code, "响应内容为：", response.Data)
+	log.Debug("请求处理完成，响应状态为：", response.Code, "响应内容为：", response.Data)
 	conn.Close()
 }
 
 //长连接处理
 func handleLongConn(conn net.Conn, timeout int, token string) {
-	//登录校验
+	log.Debug("开始处理长连接请求...")
+	//客户端信息
 	client := Client{}
 	for {
 		//将请求内容写入buff
@@ -84,9 +88,9 @@ func handleLongConn(conn net.Conn, timeout int, token string) {
 		line, err := buff.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
-				log.Println("连接已关闭！")
+				log.Info("连接已关闭！")
 			} else {
-				log.Println("读取连接内容失败！", err)
+				log.Error("读取连接内容失败！", err)
 			}
 			conn.Close()
 			return
@@ -117,7 +121,7 @@ func handleLongConn(conn net.Conn, timeout int, token string) {
 		} else {
 			io.WriteString(conn, data+"\r\n -> ")
 		}
-		log.Println("请求处理完成，响应状态为：", response.Code, "响应内容为：", data)
+		log.Debug("请求处理完成，响应状态为：", response.Code, "响应内容为：", data)
 	}
 }
 
@@ -128,7 +132,7 @@ func heartBeating(conn net.Conn, manage chan string, timeout int) {
 		conn.SetDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
 		break
 	case <-time.After(time.Second * time.Duration(timeout)):
-		log.Println("客户端连接超时，自动关闭连接")
+		log.Info("客户端连接超时，自动关闭连接")
 		conn.Close()
 	}
 }
@@ -148,10 +152,14 @@ func toString(v interface{}) string {
 	case int:
 		response = strconv.Itoa(conv)
 		break
-	case *Item:
+	case *core.CacheItem:
+		if conv != nil {
+			tmp, _ := json.Marshal(conv.Value())
+			response = string(tmp)
+		}
 		break
 	default:
-		log.Println("类型转换异常")
+		log.Error("类型转换异常")
 	}
 	return response
 }

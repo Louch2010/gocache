@@ -3,7 +3,7 @@ package main
 import (
 	default_log "log"
 	"os"
-	"runtime"
+	//"runtime"
 
 	"github.com/louch2010/gocache/conf"
 	"github.com/louch2010/gocache/core"
@@ -13,7 +13,7 @@ import (
 
 func main() {
 	//设置cpu数量
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	//runtime.GOMAXPROCS(runtime.NumCPU())
 	args := os.Args
 	default_log.Println("启动参数：", args)
 	//初始化配置文件
@@ -38,11 +38,13 @@ func main() {
 		return
 	}
 	//初始化缓存
+	log.Info("初始化缓存")
 	err = core.InitCache()
 	if err != nil {
 		log.Error("初始化缓存失败！", err)
 		return
 	}
+	log.Info("初始化缓存完成")
 	//启动服务
 	port := conf.GetSystemConfig().MustInt("server", "port", 1334)
 	aliveTime := conf.GetSystemConfig().MustInt("server", "aliveTime", 30)
