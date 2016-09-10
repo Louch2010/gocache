@@ -1,5 +1,13 @@
 package server
 
+import (
+	"encoding/json"
+	"strconv"
+
+	"github.com/louch2010/gocache/core"
+	"github.com/louch2010/gocache/log"
+)
+
 //请求类型
 const (
 	REQUEST_TYPE_PING    = "PING"    //心跳检测
@@ -17,47 +25,33 @@ const (
 	REQUEST_TYPE_HELP    = "HELP"    //帮助
 )
 
+//数据类型
+const (
+	DATA_TYPE_STRING = "string" //字符
+	DATA_TYPE_BOOL   = "bool"   //布尔
+	DATA_TYPE_NUMBER = "number" //数字
+	DATA_TYPE_MAP    = "map"    //Map
+	DATA_TYPE_SET    = "set"    //集合
+	DATA_TYPE_LIST   = "list"   //列表
+	DATA_TYPE_ZSET   = "zset"   //有序集合
+)
+
 //协议类型
 const (
-	PROTOCOL_DEFAULT  = "TERMINAL"
-	PROTOCOL_JSON     = "JSON"
-	PROTOCOL_TERMINAL = "TERMINAL"
+	//默认使用终端
+	PROTOCOL_RESPONSE_DEFAULT = "TERMINAL"
+	//JSON，一般用于各语言客户端
+	PROTOCOL_RESPONSE_JSON = "JSON"
+	//终端，用于telnet等方式
+	PROTOCOL_RESPONSE_TERMINAL = "TERMINAL"
 )
 
 //标识字符
 const (
-	FLAG_CHAR_SOCKET_COMMND_START = '\n'
-	FLAG_CHAR_SOCKET_COMMND_END   = "\r\n ->"
+	FLAG_CHAR_SOCKET_COMMND_END            = '\n'
+	FLAG_CHAR_SOCKET_TERMINAL_RESPONSE_END = "\r\n ->"
+	FLAG_CHAR_SOCKET_JSON_RESPONSE_END     = "\r\n!--!>"
 )
-
-//响应信息
-type ServerRespMsg struct {
-	Code   string      //响应码
-	Data   interface{} //响应数据
-	Err    error       //错误信息
-	Clo    bool        //是否关闭
-	Client *Client     //客户端对象
-}
-
-func GetServerRespMsg(code string, data interface{}, err error, clo bool, client *Client) ServerRespMsg {
-	resp := ServerRespMsg{
-		Code:   code,
-		Data:   data,
-		Err:    err,
-		Clo:    clo,
-		Client: client,
-	}
-	return resp
-}
-
-//连接
-type Connect struct {
-	host        string   //地址
-	port        int      //端口
-	table       string   //表名
-	listenEvent []string //侦听事件
-	protocol    string   //通讯协议
-}
 
 //客户端
 type Client struct {
@@ -69,52 +63,141 @@ type Client struct {
 	token       string   //令牌
 }
 
+//响应信息
+type ServerRespMsg struct {
+	Code     string      //响应码
+	Data     interface{} //响应数据
+	DataType string      //数据类型
+	Clo      bool        //是否关闭连接
+	Err      error       //错误信息
+	Client   *Client     //客户端对象
+}
+
+//JSON响应
+type JsonRespMsg struct {
+	Code     string
+	Msg      string
+	Data     interface{}
+	DataType string //数据类型
+}
+
+func GetServerRespMsg(code string, data interface{}, err error, client *Client) ServerRespMsg {
+	resp := ServerRespMsg{
+		Code:     code,
+		Data:     data,
+		DataType: DATA_TYPE_STRING,
+		Err:      err,
+		Clo:      false,
+		Client:   client,
+	}
+	return resp
+}
+
+//根据连接协议，将响应内容进行封装
+func TransferResponse(response ServerRespMsg) string {
+	protocol := response.Client.protocol
+	//终端方式
+	if protocol == "" || protocol == PROTOCOL_RESPONSE_TERMINAL {
+		if response.Err != nil {
+			return response.Err.Error() + FLAG_CHAR_SOCKET_TERMINAL_RESPONSE_END
+		}
+		return toString(response.Data) + FLAG_CHAR_SOCKET_TERMINAL_RESPONSE_END
+	}
+	//JSON方式
+	if protocol == PROTOCOL_RESPONSE_JSON {
+		msg := MESSAGE_SUCCESS
+		if response.Err != nil {
+			msg = response.Err.Error()
+		}
+		obj := JsonRespMsg{
+			Code:     response.Code,
+			Msg:      msg,
+			Data:     response.Data,
+			DataType: response.DataType,
+		}
+		j, _ := json.Marshal(obj)
+		return string(j) + FLAG_CHAR_SOCKET_JSON_RESPONSE_END
+	}
+	return ""
+}
+
+//转string
+func toString(v interface{}) string {
+	response := ""
+	switch conv := v.(type) {
+	case string:
+		response = conv
+		break
+	case int:
+		response = strconv.Itoa(conv)
+		break
+	case *core.CacheItem:
+		if conv != nil {
+			tmp, _ := json.Marshal(conv.Value())
+			response = string(tmp)
+		}
+		break
+	default:
+		log.Error("类型转换异常")
+	}
+	return response
+}
+
+//连接
+//type Connect struct {
+//	host        string   //地址
+//	port        int      //端口
+//	table       string   //表名
+//	listenEvent []string //侦听事件
+//	protocol    string   //通讯协议
+//}
+
 //新增
-type Add struct {
-	key      string //键
-	value    string //值
-	liveTime int64  //存活时间
-}
+//type Add struct {
+//	key      string //键
+//	value    string //值
+//	liveTime int64  //存活时间
+//}
 
-//获取
-type Get struct {
-	key string //键
-}
+////获取
+//type Get struct {
+//	key string //键
+//}
 
-//删除
-type Delete struct {
-	key string //键
-}
+////删除
+//type Delete struct {
+//	key string //键
+//}
 
-//存在
-type Exist struct {
-	key string //键
-}
+////存在
+//type Exist struct {
+//	key string //键
+//}
 
-//表
-type Table struct {
-	name           string //表名
-	itemsCount     int64  //缓存项数量
-	createTime     string //创建时间
-	lastAccessTime string //最后访问时间
-	lastModifyTime string //最后修改时间
-	accessCount    int64  //访问次数
-}
+////表
+//type Table struct {
+//	name           string //表名
+//	itemsCount     int64  //缓存项数量
+//	createTime     string //创建时间
+//	lastAccessTime string //最后访问时间
+//	lastModifyTime string //最后修改时间
+//	accessCount    int64  //访问次数
+//}
 
-//项
-type Item struct {
-	key            string //键
-	value          string //值
-	liveTime       int64  //存活时间
-	createTime     string //创建时间
-	lastAccessTime string //最后访问时间
-	lastModifyTime string //最后修改时间
-	accessCount    int64  //访问次数
-}
+////项
+//type Item struct {
+//	key            string //键
+//	value          string //值
+//	liveTime       int64  //存活时间
+//	createTime     string //创建时间
+//	lastAccessTime string //最后访问时间
+//	lastModifyTime string //最后修改时间
+//	accessCount    int64  //访问次数
+//}
 
 //事件
-type Event struct {
-	eventType string //事件类型
-	table     Table  //表
-	item      Item   //项
-}
+//type Event struct {
+//	eventType string //事件类型
+//	table     Table  //表
+//	item      Item   //项
+//}

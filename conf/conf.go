@@ -102,7 +102,7 @@ func GetLogConfig(level string, format string, path string, roll string, console
 const CONFIG_HELP_CONTENT_EN = `
 [connect]
 Desc=connect to the server
-Format=connect [-t'table'] [-a'pwd'] [-i'ip'] [-p'port'] [-e'e1,e2...']
+Format=connect [-t'table'] [-a'pwd'] [-i'ip'] [-p'port'] [-r'protocol'] [-e'e1,e2...']
 [exit]
 Desc=close connect and exit
 Format=exit
@@ -153,6 +153,8 @@ password=
 maxPoolSize=10
 #core size for connect pool
 corePoolSize=5
+#connect type: long|short
+connectType = long
 #connect alive time, unit is second
 aliveTime=3000
 #system table use to cache connection info
@@ -166,8 +168,6 @@ anonymCommnd=ping,connect,exit,help,info
 default=default
 
 [client]
-#client connect type: long|short
-connectType=long
 #open session: true|false
 openSession=true
 
@@ -187,5 +187,5 @@ format=%Date %Time [%LEV] %Msg%n
 #log file path
 path=./log/gocache.log
 #
-roll=02.01.2006
+roll=2006-01-02
 `

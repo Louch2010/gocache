@@ -2,28 +2,27 @@ package server
 
 import (
 	"bufio"
-	"encoding/json"
 	"io"
 	"math/rand"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/louch2010/gocache/core"
 	"github.com/louch2010/gocache/log"
 	"github.com/louch2010/goutil"
 )
 
 //服务器运行状态标识
-var ServerStatusFlag bool = false
+var serverStatusFlag bool = false
 
 //启动服务
-func Start(port int, timeout int) error {
-	if ServerStatusFlag {
+func Start(port int, timeout int, connectType string) error {
+	if serverStatusFlag {
 		log.Error("服务已经在运行，无需再次启动")
 		return ERROR_SERVER_ALREADY_START
 	}
-	ServerStatusFlag = true
+	serverStatusFlag = true
 	log.Info("启动服务，端口号：", port, "，连接超时时间：", timeout)
 	//定义端口地址
 	addr, err := net.ResolveTCPAddr("tcp4", ":"+strconv.Itoa(port))
@@ -37,7 +36,7 @@ func Start(port int, timeout int) error {
 		log.Error("启动端口侦听失败！", err)
 		return err
 	}
-	for ServerStatusFlag {
+	for serverStatusFlag {
 		//当接收到了请求，则返回一个conn
 		conn, err := listener.Accept()
 		//生成唯一token
@@ -48,8 +47,16 @@ func Start(port int, timeout int) error {
 			log.Error("接收请求时出错！", err)
 			continue
 		}
-		//使用长连接方式处理
-		go handleLongConn(conn, timeout, token)
+		//根据配置启用不同的连接类型
+		connectType = strings.ToLower(connectType)
+		if connectType == "long" {
+			go handleLongConn(conn, timeout, token)
+		} else if connectType == "short" {
+			go handleShortConn(conn, timeout, token)
+		} else {
+			log.Error("非法的服务器配置，连接类型：", connectType)
+			return ERROR_SERVER_CONNECT_TYPE
+		}
 	}
 	log.Info("服务已停止！")
 	return nil
@@ -58,7 +65,7 @@ func Start(port int, timeout int) error {
 //停止服务
 func Stop() {
 	log.Info("停止服务...")
-	ServerStatusFlag = false
+	serverStatusFlag = false
 }
 
 //短连接处理
@@ -67,10 +74,10 @@ func handleShortConn(conn net.Conn, timeout int, token string) {
 	conn.SetDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
 	//将请求读入缓存，并读取其中的一行
 	buff := bufio.NewReader(conn)
-	line, _ := buff.ReadString(FLAG_CHAR_SOCKET_COMMND_START)
+	line, _ := buff.ReadString(FLAG_CHAR_SOCKET_COMMND_END)
 	//解析请求并响应
 	response := ParserRequest(line, token, Client{})
-	conn.Write([]byte(toString(response.Data) + string(FLAG_CHAR_SOCKET_COMMND_END)))
+	conn.Write([]byte(TransferResponse(response)))
 	log.Debug("请求处理完成，响应状态为：", response.Code, "响应内容为：", response.Data)
 	conn.Close()
 }
@@ -84,7 +91,7 @@ func handleLongConn(conn net.Conn, timeout int, token string) {
 		//将请求内容写入buff
 		buff := bufio.NewReader(conn)
 		//只读取一行内容
-		line, err := buff.ReadString(FLAG_CHAR_SOCKET_COMMND_START)
+		line, err := buff.ReadString(FLAG_CHAR_SOCKET_COMMND_END)
 		if err != nil {
 			if err == io.EOF {
 				log.Info("连接已关闭！")
@@ -99,26 +106,18 @@ func handleLongConn(conn net.Conn, timeout int, token string) {
 		go heartBeating(conn, manage, timeout)
 		//检测每次Client是否有数据传来
 		go gravelChannel(line, manage)
-		//解析请求并响应
+		//解析请求
 		response := ParserRequest(line, token, client)
-		data := ""
-		if response.Err != nil {
-			data = response.Err.Error()
-		} else {
-			data = toString(response.Data)
-			if len(data) == 0 {
-				data = response.Code
-			}
-			//将client进行缓存
-			if response.Client != nil {
-				client = *response.Client
-			}
+		//将client进行缓存
+		if response.Err == nil && response.Client != nil {
+			client = *response.Client
 		}
+		//响应
+		data := TransferResponse(response)
+		io.WriteString(conn, data)
 		if response.Clo {
-			io.WriteString(conn, data)
 			conn.Close()
-		} else {
-			io.WriteString(conn, data+FLAG_CHAR_SOCKET_COMMND_END)
+			break
 		}
 		log.Debug("请求处理完成，响应状态为：", response.Code, "响应内容为：", data)
 	}
@@ -139,26 +138,4 @@ func heartBeating(conn net.Conn, manage chan string, timeout int) {
 func gravelChannel(content string, manage chan string) {
 	manage <- content
 	close(manage)
-}
-
-//转string
-func toString(v interface{}) string {
-	response := ""
-	switch conv := v.(type) {
-	case string:
-		response = conv
-		break
-	case int:
-		response = strconv.Itoa(conv)
-		break
-	case *core.CacheItem:
-		if conv != nil {
-			tmp, _ := json.Marshal(conv.Value())
-			response = string(tmp)
-		}
-		break
-	default:
-		log.Error("类型转换异常")
-	}
-	return response
 }

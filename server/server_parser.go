@@ -16,7 +16,7 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 	log.Debug("开始处理请求，token：", token, "，请求内容为：", request)
 	//请求内容为空时，不处理
 	if goutil.StringUtil().IsEmpty(request) {
-		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, false, nil)
+		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, nil)
 	}
 	arr := strings.SplitN(request, " ", 2)
 	head := strings.ToUpper(goutil.StringUtil().TrimToEmpty(arr[0])) //请求头
@@ -38,7 +38,7 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 	if !isLogin {
 		//需要登录，而且也不是免登录的命令
 		if openSession && !IsAnonymCommnd(head) {
-			return GetServerRespMsg(MESSAGE_COMMND_NO_LOGIN, "", ERROR_COMMND_NO_LOGIN, false, nil)
+			return GetServerRespMsg(MESSAGE_COMMND_NO_LOGIN, "", ERROR_COMMND_NO_LOGIN, nil)
 		}
 		//模拟登录
 		if !openSession {
@@ -54,7 +54,7 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 	switch head {
 	//心跳检测
 	case REQUEST_TYPE_PING:
-		response = GetServerRespMsg(MESSAGE_SUCCESS, MESSAGE_PONG, nil, false, &client)
+		response = GetServerRespMsg(MESSAGE_SUCCESS, MESSAGE_PONG, nil, &client)
 		break
 	//查看帮助
 	case REQUEST_TYPE_HELP:
@@ -62,7 +62,8 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 		break
 	//退出
 	case REQUEST_TYPE_EXIT:
-		response = GetServerRespMsg(MESSAGE_SUCCESS, "", nil, true, &client)
+		response = GetServerRespMsg(MESSAGE_SUCCESS, "", nil, &client)
+		response.Clo = true
 		DestroySession(token)
 		log.Debug("客户端主动退出，请求处理完毕")
 		break
@@ -104,7 +105,7 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 		break
 	//命令不正确
 	default:
-		response = GetServerRespMsg(MESSAGE_COMMND_NOT_FOUND, "", ERROR_COMMND_NOT_FOUND, false, &client)
+		response = GetServerRespMsg(MESSAGE_COMMND_NOT_FOUND, "", ERROR_COMMND_NOT_FOUND, &client)
 	}
 	return response
 }

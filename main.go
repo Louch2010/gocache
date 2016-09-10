@@ -48,7 +48,8 @@ func main() {
 	//启动服务
 	port := conf.GetSystemConfig().MustInt("server", "port", 1334)
 	aliveTime := conf.GetSystemConfig().MustInt("server", "aliveTime", 30)
-	err = server.Start(port, aliveTime)
+	connectType := conf.GetSystemConfig().MustValue("server", "connectType", "long")
+	err = server.Start(port, aliveTime, connectType)
 	if err != nil {
 		log.Error("启动服务失败！", err)
 		return
