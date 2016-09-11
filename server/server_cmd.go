@@ -3,7 +3,6 @@ package server
 import (
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/louch2010/gocache/conf"
 	"github.com/louch2010/gocache/core"
@@ -107,52 +106,6 @@ func HandleConnectCommnd(body, token string) ServerRespMsg {
 	}
 	CreateSession(token, client)
 	return GetServerRespMsg(MESSAGE_SUCCESS, token, nil, &client)
-}
-
-//Set命令处理
-func HandleSetCommnd(body string, client Client) ServerRespMsg {
-	//请求体校验
-	resp, check := checkBody(body, 2, 3)
-	if !check {
-		return resp
-	}
-	args := strings.Split(body, " ")
-	var liveTime int = 0
-	if len(args) == 3 {
-		t, err := strconv.Atoi(args[2])
-		if err != nil {
-			log.Info("参数转换错误，liveTime：", args[2], err)
-			return GetServerRespMsg(MESSAGE_COMMND_PARAM_ERROR, "", ERROR_COMMND_PARAM_ERROR, &client)
-		}
-		liveTime = t
-	}
-	//增加缓存项
-	table, err := core.Cache(client.table)
-	if err != nil {
-		log.Error("执行Set命令出错，获取表失败，表名：", client.table)
-		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, &client)
-	}
-	item := table.Set(args[0], args[1], time.Duration(liveTime)*time.Second)
-	return GetServerRespMsg(MESSAGE_SUCCESS, item, nil, &client)
-}
-
-//Get命令处理
-func HandleGetCommnd(body string, client Client) ServerRespMsg {
-	//请求体校验
-	resp, check := checkBody(body, 1, 1)
-	if !check {
-		return resp
-	}
-	table, err := core.Cache(client.table)
-	if err != nil {
-		log.Error("执行Get命令出错，获取表失败，表名：", client.table)
-		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, &client)
-	}
-	item := table.Get(body)
-	if item == nil {
-		return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, &client)
-	}
-	return GetServerRespMsg(MESSAGE_SUCCESS, item.Value(), nil, &client)
 }
 
 //Delete命令处理

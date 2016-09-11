@@ -8,13 +8,11 @@ import (
 	"github.com/louch2010/gocache/log"
 )
 
-//请求类型
+//请求命令
 const (
 	REQUEST_TYPE_PING    = "PING"    //心跳检测
 	REQUEST_TYPE_CONNECT = "CONNECT" //连接
 	REQUEST_TYPE_EXIT    = "EXIT"    //断开连接
-	REQUEST_TYPE_SET     = "SET"     //添加
-	REQUEST_TYPE_GET     = "GET"     //获取
 	REQUEST_TYPE_DELETE  = "DELETE"  //删除
 	REQUEST_TYPE_EXIST   = "EXIST"   //存在
 	REQUEST_TYPE_EVENT   = "EVENT"   //事件
@@ -23,6 +21,18 @@ const (
 	REQUEST_TYPE_SHOWI   = "SHOWI"   //显示项信息
 	REQUEST_TYPE_INFO    = "INFO"    //显示系统信息
 	REQUEST_TYPE_HELP    = "HELP"    //帮助
+
+	REQUEST_TYPE_SET    = "SET"    //添加string
+	REQUEST_TYPE_GET    = "GET"    //获取string
+	REQUEST_TYPE_APPEND = "APPEND" //追加string
+	REQUEST_TYPE_STRLEN = "STRLEN" //值的长度string
+	REQUEST_TYPE_SETNX  = "SETNX"  //不存在则设置string
+
+	REQUEST_TYPE_NSET   = "NSET"   //添加number
+	REQUEST_TYPE_NGET   = "NGET"   //获取number
+	REQUEST_TYPE_INCR   = "INCR"   //增加1 number
+	REQUEST_TYPE_INCRBY = "INCRBY" //增加指定值 number
+
 )
 
 //数据类型

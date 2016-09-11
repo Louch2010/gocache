@@ -32,6 +32,13 @@ func (item *CacheItem) Value() interface{} {
 	return v
 }
 
+//获取值
+func (item *CacheItem) SetValue(value interface{}) {
+	item.Lock()
+	item.value = value
+	defer item.Unlock()
+}
+
 //存活时间
 func (item *CacheItem) LiveTime() time.Duration {
 	item.RLock()
