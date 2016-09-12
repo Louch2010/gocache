@@ -10,7 +10,7 @@ import (
 )
 
 //解析请求
-func ParserRequest(request string, token string, client Client) ServerRespMsg {
+func ParserRequest(request string, token string, client *Client) ServerRespMsg {
 	//去除换行、空格
 	request = goutil.StringUtil().TrimToEmpty(request)
 	log.Debug("开始处理请求，token：", token, "，请求内容为：", request)
@@ -45,19 +45,19 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 		if !openSession {
 			table := conf.GetSystemConfig().MustValue("table", "default", core.DEFAULT_TABLE_NAME)
 			cacheTable, _ := core.Cache(table)
-			client = Client{
+			client = &Client{
 				table:      table,
 				cacheTable: cacheTable,
 				token:      token,
 			}
 		}
 	}
-	log.Debug("会话信息：", client)
+	log.Debug("会话信息：", *client)
 	//解析
 	switch head {
 	//心跳检测
 	case REQUEST_TYPE_PING:
-		response = GetServerRespMsg(MESSAGE_SUCCESS, MESSAGE_PONG, nil, &client)
+		response = GetServerRespMsg(MESSAGE_SUCCESS, MESSAGE_PONG, nil, client)
 		break
 	//查看帮助
 	case REQUEST_TYPE_HELP:
@@ -65,7 +65,7 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 		break
 	//退出
 	case REQUEST_TYPE_EXIT:
-		response = GetServerRespMsg(MESSAGE_SUCCESS, "", nil, &client)
+		response = GetServerRespMsg(MESSAGE_SUCCESS, "", nil, client)
 		response.Clo = true
 		DestroySession(token)
 		log.Debug("客户端主动退出，请求处理完毕")
@@ -139,13 +139,13 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 
 	//命令不正确
 	default:
-		response = GetServerRespMsg(MESSAGE_COMMAND_NOT_FOUND, "", ERROR_COMMAND_NOT_FOUND, &client)
+		response = GetServerRespMsg(MESSAGE_COMMAND_NOT_FOUND, "", ERROR_COMMAND_NOT_FOUND, client)
 	}
 	return response
 }
 
 //创建会话
-func CreateSession(token string, c Client) bool {
+func CreateSession(token string, c *Client) bool {
 	//缓存登录信息
 	table, _ := core.GetSysTable()
 	table.Set(token, c, 0, DATA_TYPE_OBJECT)
@@ -155,14 +155,14 @@ func CreateSession(token string, c Client) bool {
 }
 
 //获取会话
-func GetSession(token string) (Client, bool) {
+func GetSession(token string) (*Client, bool) {
 	table, _ := core.GetSysTable()
 	item := table.Get(token)
 	if item == nil {
-		return Client{}, false
+		return &Client{}, false
 	}
 	value, falg := item.Value().(Client)
-	return value, falg
+	return &value, falg
 }
 
 //销毁会话

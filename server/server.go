@@ -76,7 +76,7 @@ func handleShortConn(conn net.Conn, timeout int, token string) {
 	buff := bufio.NewReader(conn)
 	line, _ := buff.ReadString(FLAG_CHAR_SOCKET_COMMND_END)
 	//解析请求并响应
-	response := ParserRequest(line, token, Client{})
+	response := ParserRequest(line, token, &Client{})
 	conn.Write([]byte(TransferResponse(response)))
 	log.Debug("请求处理完成，响应状态为：", response.Code, "响应内容为：", response.Data)
 	conn.Close()
@@ -86,7 +86,7 @@ func handleShortConn(conn net.Conn, timeout int, token string) {
 func handleLongConn(conn net.Conn, timeout int, token string) {
 	log.Debug("开始处理长连接请求...")
 	//客户端信息
-	client := Client{}
+	client := &Client{}
 	for {
 		//将请求内容写入buff
 		buff := bufio.NewReader(conn)
@@ -110,7 +110,7 @@ func handleLongConn(conn net.Conn, timeout int, token string) {
 		response := ParserRequest(line, token, client)
 		//将client进行缓存
 		if response.Err == nil && response.Client != nil {
-			client = *response.Client
+			client = response.Client
 		}
 		//响应
 		data := TransferResponse(response)

@@ -11,7 +11,7 @@ import (
 )
 
 //帮助命令处理
-func HandleHelpCommnd(body string, client Client) ServerRespMsg {
+func HandleHelpCommnd(body string, client *Client) ServerRespMsg {
 	response := ""
 	help := conf.GetHelpConfig()
 	if len(body) == 0 { //没有请求体，则显示所有命令名称
@@ -31,7 +31,7 @@ func HandleHelpCommnd(body string, client Client) ServerRespMsg {
 			}
 		}
 	}
-	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, &client)
+	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, client)
 }
 
 //连接命令处理connect [-t'table'] [-a'pwd'] [-i'ip'] [-p'port'] [-e'e1,e2...']
@@ -102,7 +102,7 @@ func HandleConnectCommnd(body, token string) ServerRespMsg {
 		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, nil)
 	}
 	//存储连接信息
-	client := Client{
+	client := &Client{
 		host:        ip,
 		port:        portInt,
 		table:       table,
@@ -112,36 +112,36 @@ func HandleConnectCommnd(body, token string) ServerRespMsg {
 		token:       token,
 	}
 	CreateSession(token, client)
-	return GetServerRespMsg(MESSAGE_SUCCESS, token, nil, &client)
+	return GetServerRespMsg(MESSAGE_SUCCESS, token, nil, client)
 }
 
 //Delete命令处理
-func HandleDeleteCommnd(body string, client Client) ServerRespMsg {
+func HandleDeleteCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
 	resp, check := checkBody(body, 1, 1)
 	if !check {
 		return resp
 	}
 	if client.cacheTable.Delete(body) {
-		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, &client)
+		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, client)
 	}
-	return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, &client)
+	return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, client)
 }
 
 //Exist命令处理
-func HandleExistCommnd(body string, client Client) ServerRespMsg {
+func HandleExistCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
 	resp, check := checkBody(body, 1, 1)
 	if !check {
 		return resp
 	}
-	response := GetServerRespMsg(MESSAGE_SUCCESS, client.cacheTable.IsExist(body), nil, &client)
+	response := GetServerRespMsg(MESSAGE_SUCCESS, client.cacheTable.IsExist(body), nil, client)
 	response.DataType = DATA_TYPE_BOOL
 	return response
 }
 
 //切换表
-func HandleUseCommnd(body string, client Client) ServerRespMsg {
+func HandleUseCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
 	resp, check := checkBody(body, 1, 1)
 	if !check {
@@ -155,13 +155,13 @@ func HandleUseCommnd(body string, client Client) ServerRespMsg {
 	client.table = body
 	client.cacheTable = cacheTable
 	if CreateSession(client.token, client) {
-		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, &client)
+		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, client)
 	}
-	return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, &client)
+	return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, client)
 }
 
 //显示表信息
-func HandleShowtCommnd(body string, client Client) ServerRespMsg {
+func HandleShowtCommnd(body string, client *Client) ServerRespMsg {
 	response := ""
 	if len(body) == 0 { //没有请求体，则显示所有表名
 		list := core.GetCacheTables()
@@ -179,7 +179,7 @@ func HandleShowtCommnd(body string, client Client) ServerRespMsg {
 	} else {
 		table, ok := core.GetCacheTable(body)
 		if !ok {
-			return GetServerRespMsg(MESSAGE_TABLE_NOT_EXIST, response, ERROR_TABLE_NOT_EXIST, &client)
+			return GetServerRespMsg(MESSAGE_TABLE_NOT_EXIST, response, ERROR_TABLE_NOT_EXIST, client)
 		}
 		response += "name:" + table.Name() + "\r\n"
 		response += "itemCount: " + strconv.Itoa(table.ItemCount()) + "\r\n"
@@ -188,11 +188,11 @@ func HandleShowtCommnd(body string, client Client) ServerRespMsg {
 		response += "lastModifyTime: " + goutil.DateUtil().TimeFullFormat(table.LastModifyTime()) + "\r\n"
 		response += "accessCount: " + strconv.FormatInt(table.AccessCount(), 10)
 	}
-	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, &client)
+	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, client)
 }
 
 //显示项信息
-func HandleShowiCommnd(body string, client Client) ServerRespMsg {
+func HandleShowiCommnd(body string, client *Client) ServerRespMsg {
 	response := ""
 	table, _ := core.Cache(client.table)
 	if len(body) == 0 { //没有请求体，则显示所有项
@@ -205,7 +205,7 @@ func HandleShowiCommnd(body string, client Client) ServerRespMsg {
 	} else {
 		item := table.Get(body)
 		if item == nil {
-			return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, &client)
+			return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, client)
 		}
 		response += "key: " + item.Key() + "\r\n"
 		response += "value: " + item.Value().(string) + "\r\n"
@@ -215,17 +215,17 @@ func HandleShowiCommnd(body string, client Client) ServerRespMsg {
 		response += "accessCount: " + strconv.FormatInt(item.AccessCount(), 10) + "\r\n"
 		response += "dataType: " + item.DataType() + "\r\n"
 	}
-	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, &client)
+	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, client)
 }
 
 //服务器信息
-func HandleInfoCommnd(body string, client Client) ServerRespMsg {
+func HandleInfoCommnd(body string, client *Client) ServerRespMsg {
 	info, _ := conf.GetSystemConfig().GetSection("")
 	response := ""
 	for k, v := range info {
 		response += k + ": " + v + "\r\n"
 	}
-	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, &client)
+	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, client)
 }
 
 //请求体检查

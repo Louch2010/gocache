@@ -9,7 +9,7 @@ import (
 )
 
 //NSet命令处理
-func HandleNSetCommnd(body string, client Client) ServerRespMsg {
+func HandleNSetCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
 	resp, check := checkBody(body, 2, 3)
 	if !check {
@@ -21,22 +21,22 @@ func HandleNSetCommnd(body string, client Client) ServerRespMsg {
 		t, err := strconv.Atoi(args[2])
 		if err != nil {
 			log.Info("参数转换错误，liveTime：", args[2], err)
-			return GetServerRespMsg(MESSAGE_COMMAND_PARAM_ERROR, "", ERROR_COMMAND_PARAM_ERROR, &client)
+			return GetServerRespMsg(MESSAGE_COMMAND_PARAM_ERROR, "", ERROR_COMMAND_PARAM_ERROR, client)
 		}
 		liveTime = t
 	}
 	f, err := strconv.ParseFloat(args[1], 64)
 	if err != nil {
 		log.Info("参数类型错误，nset value：", args[0], err)
-		return GetServerRespMsg(MESSAGE_COMMAND_NOT_SUPPORT_DATA, "", ERROR_COMMAND_NOT_SUPPORT_DATA, &client)
+		return GetServerRespMsg(MESSAGE_COMMAND_NOT_SUPPORT_DATA, "", ERROR_COMMAND_NOT_SUPPORT_DATA, client)
 	}
 	//增加缓存项
 	item := client.cacheTable.Set(args[0], f, time.Duration(liveTime)*time.Second, DATA_TYPE_NUMBER)
-	return GetServerRespMsg(MESSAGE_SUCCESS, item, nil, &client)
+	return GetServerRespMsg(MESSAGE_SUCCESS, item, nil, client)
 }
 
 //NGet命令处理
-func HandleNGetCommnd(body string, client Client) ServerRespMsg {
+func HandleNGetCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
 	resp, check := checkBody(body, 1, 1)
 	if !check {
@@ -44,19 +44,19 @@ func HandleNGetCommnd(body string, client Client) ServerRespMsg {
 	}
 	item := client.cacheTable.Get(body)
 	if item == nil {
-		return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, &client)
+		return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, client)
 	}
 	//数据类型校验
 	if item.DataType() != DATA_TYPE_NUMBER {
-		return GetServerRespMsg(MESSAGE_COMMAND_NOT_SUPPORT_DATA, "", ERROR_COMMAND_NOT_SUPPORT_DATA, &client)
+		return GetServerRespMsg(MESSAGE_COMMAND_NOT_SUPPORT_DATA, "", ERROR_COMMAND_NOT_SUPPORT_DATA, client)
 	}
-	response := GetServerRespMsg(MESSAGE_SUCCESS, item.Value(), nil, &client)
+	response := GetServerRespMsg(MESSAGE_SUCCESS, item.Value(), nil, client)
 	response.DataType = DATA_TYPE_NUMBER
 	return response
 }
 
 //Incr命令处理
-func HandleIncrCommnd(body string, client Client) ServerRespMsg {
+func HandleIncrCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
 	resp, check := checkBody(body, 1, 1)
 	if !check {
@@ -70,19 +70,19 @@ func HandleIncrCommnd(body string, client Client) ServerRespMsg {
 	} else {
 		//数据类型校验
 		if item.DataType() != DATA_TYPE_NUMBER {
-			return GetServerRespMsg(MESSAGE_COMMAND_NOT_SUPPORT_DATA, "", ERROR_COMMAND_NOT_SUPPORT_DATA, &client)
+			return GetServerRespMsg(MESSAGE_COMMAND_NOT_SUPPORT_DATA, "", ERROR_COMMAND_NOT_SUPPORT_DATA, client)
 		}
 		o, _ := item.Value().(float64)
 		v = o + v
 		item.SetValue(v)
 	}
-	response := GetServerRespMsg(MESSAGE_SUCCESS, v, nil, &client)
+	response := GetServerRespMsg(MESSAGE_SUCCESS, v, nil, client)
 	response.DataType = DATA_TYPE_NUMBER
 	return response
 }
 
 //IncrBy命令处理
-func HandleIncrByCommnd(body string, client Client) ServerRespMsg {
+func HandleIncrByCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
 	resp, check := checkBody(body, 2, 2)
 	if !check {
@@ -97,13 +97,13 @@ func HandleIncrByCommnd(body string, client Client) ServerRespMsg {
 	} else {
 		//数据类型校验
 		if item.DataType() != DATA_TYPE_NUMBER {
-			return GetServerRespMsg(MESSAGE_COMMAND_NOT_SUPPORT_DATA, "", ERROR_COMMAND_NOT_SUPPORT_DATA, &client)
+			return GetServerRespMsg(MESSAGE_COMMAND_NOT_SUPPORT_DATA, "", ERROR_COMMAND_NOT_SUPPORT_DATA, client)
 		}
 		o, _ := item.Value().(float64)
 		v = o + v
 		item.SetValue(v)
 	}
-	response := GetServerRespMsg(MESSAGE_SUCCESS, v, nil, &client)
+	response := GetServerRespMsg(MESSAGE_SUCCESS, v, nil, client)
 	response.DataType = DATA_TYPE_NUMBER
 	return response
 }
