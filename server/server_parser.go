@@ -18,6 +18,7 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 	if goutil.StringUtil().IsEmpty(request) {
 		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, nil)
 	}
+	//解析请求头、请求体
 	arr := strings.SplitN(request, " ", 2)
 	head := strings.ToUpper(goutil.StringUtil().TrimToEmpty(arr[0])) //请求头
 	body := ""                                                       //请求体
@@ -32,20 +33,22 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 	if len(client.token) > 0 {
 		isLogin = true
 	} else {
-		client, isLogin = GetSession(token)
+		client, isLogin = GetSession(token) //尝试从cache中获取客户端信息
 	}
 	//没有登录
 	if !isLogin {
 		//需要登录，而且也不是免登录的命令
 		if openSession && !IsAnonymCommnd(head) {
-			return GetServerRespMsg(MESSAGE_COMMND_NO_LOGIN, "", ERROR_COMMND_NO_LOGIN, nil)
+			return GetServerRespMsg(MESSAGE_COMMAND_NO_LOGIN, "", ERROR_COMMAND_NO_LOGIN, nil)
 		}
 		//模拟登录
 		if !openSession {
 			table := conf.GetSystemConfig().MustValue("table", "default", core.DEFAULT_TABLE_NAME)
+			cacheTable, _ := core.Cache(table)
 			client = Client{
-				table: table,
-				token: token,
+				table:      table,
+				cacheTable: cacheTable,
+				token:      token,
 			}
 		}
 	}
@@ -136,7 +139,7 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 
 	//命令不正确
 	default:
-		response = GetServerRespMsg(MESSAGE_COMMND_NOT_FOUND, "", ERROR_COMMND_NOT_FOUND, &client)
+		response = GetServerRespMsg(MESSAGE_COMMAND_NOT_FOUND, "", ERROR_COMMAND_NOT_FOUND, &client)
 	}
 	return response
 }
@@ -145,7 +148,7 @@ func ParserRequest(request string, token string, client Client) ServerRespMsg {
 func CreateSession(token string, c Client) bool {
 	//缓存登录信息
 	table, _ := core.GetSysTable()
-	table.Set(token, c, 0)
+	table.Set(token, c, 0, DATA_TYPE_OBJECT)
 	//创建表信息
 	core.Cache(c.table)
 	return true

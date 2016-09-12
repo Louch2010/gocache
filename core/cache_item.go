@@ -8,17 +8,17 @@ import (
 //缓存项
 type CacheItem struct {
 	sync.RWMutex                 //锁
-	key            interface{}   //键
+	key            string        //键
 	value          interface{}   //值
 	liveTime       time.Duration //存活时间
 	createTime     time.Time     //创建时间
 	lastAccessTime time.Time     //最后访问时间
-	lastModifyTime time.Time     //最后修改时间
 	accessCount    int64         //访问次数
+	dataType       string        //数据类型
 }
 
 //键
-func (item *CacheItem) Key() interface{} {
+func (item *CacheItem) Key() string {
 	item.RLock()
 	defer item.RUnlock()
 	return item.key
@@ -60,13 +60,6 @@ func (item *CacheItem) LastAccessTime() time.Time {
 	return item.lastAccessTime
 }
 
-//最后修改时间
-func (item *CacheItem) LastModifyTime() time.Time {
-	item.RLock()
-	defer item.RUnlock()
-	return item.lastModifyTime
-}
-
 //访问次数
 func (item *CacheItem) AccessCount() int64 {
 	item.RLock()
@@ -82,15 +75,21 @@ func (item *CacheItem) Access() {
 	item.lastAccessTime = time.Now()
 }
 
-//修改
-func (item *CacheItem) Modify() {
+//数据类型
+func (item *CacheItem) SetDataType(dataType string) {
 	item.Lock()
 	defer item.Unlock()
-	item.lastModifyTime = time.Now()
+	item.dataType = dataType
+}
+
+func (item *CacheItem) DataType() string {
+	item.RLock()
+	defer item.RUnlock()
+	return item.dataType
 }
 
 //新建Item
-func NewCacheItem(key interface{}, value interface{}, liveTime time.Duration) *CacheItem {
+func NewCacheItem(key string, value interface{}, liveTime time.Duration, dataType string) *CacheItem {
 	now := time.Now()
 	item := CacheItem{
 		key:            key,
@@ -98,8 +97,8 @@ func NewCacheItem(key interface{}, value interface{}, liveTime time.Duration) *C
 		liveTime:       liveTime,
 		createTime:     now,
 		lastAccessTime: now,
-		lastModifyTime: now,
 		accessCount:    0,
+		dataType:       dataType,
 	}
 	return &item
 }

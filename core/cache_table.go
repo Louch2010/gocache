@@ -12,7 +12,7 @@ import (
 type CacheTable struct {
 	sync.RWMutex                                                                     //锁
 	name                      string                                                 //表名
-	items                     map[interface{}]*CacheItem                             //缓存项
+	items                     map[string]*CacheItem                                  //缓存项
 	createTime                time.Time                                              //创建时间
 	lastAccessTime            time.Time                                              //最后访问时间
 	lastModifyTime            time.Time                                              //最后修改时间
@@ -70,7 +70,7 @@ func (table *CacheTable) ItemCount() int {
 }
 
 //获取所有缓存项
-func (table *CacheTable) GetItems() map[interface{}]*CacheItem {
+func (table *CacheTable) GetItems() map[string]*CacheItem {
 	table.RLock()
 	defer table.RUnlock()
 	return table.items
@@ -87,7 +87,7 @@ func (table *CacheTable) Access() {
 }
 
 //缓存项是否存在
-func (table *CacheTable) IsExist(key interface{}) bool {
+func (table *CacheTable) IsExist(key string) bool {
 	//使用读锁，判断是否存在
 	table.RLock()
 	_, ok := table.items[key]
@@ -99,13 +99,13 @@ func (table *CacheTable) IsExist(key interface{}) bool {
 }
 
 //添加缓存项，如果已经存在，会返回原缓存项，如果不存在，则返回的是nil
-func (table *CacheTable) Set(key interface{}, value interface{}, liveTime time.Duration) *CacheItem {
-	item := NewCacheItem(key, value, liveTime)
+func (table *CacheTable) Set(key string, value interface{}, liveTime time.Duration, dataType string) *CacheItem {
+	item := NewCacheItem(key, value, liveTime, dataType)
 	return table.AddItem(key, item)
 }
 
 //添加缓存项，如果已经存在，会返回原缓存项，如果不存在，则返回的是nil
-func (table *CacheTable) AddItem(key interface{}, item *CacheItem) *CacheItem {
+func (table *CacheTable) AddItem(key string, item *CacheItem) *CacheItem {
 	//修改表属性
 	table.Lock()
 	old, ok := table.items[key]
@@ -128,7 +128,7 @@ func (table *CacheTable) AddItem(key interface{}, item *CacheItem) *CacheItem {
 	//调用回调函数
 	if ok {
 		table.itemEventCallBack(table, item, EVENT_ITEM_MODIFY)
-		item.Modify()
+		item.Access()
 	} else {
 		table.itemEventCallBack(table, item, EVENT_ITEM_ADD)
 	}
@@ -136,7 +136,7 @@ func (table *CacheTable) AddItem(key interface{}, item *CacheItem) *CacheItem {
 }
 
 //删除缓存项，删除成功返回true，删除失败返回false
-func (table *CacheTable) Delete(key interface{}) bool {
+func (table *CacheTable) Delete(key string) bool {
 	table.RLock()
 	item, ok := table.items[key]
 	table.RUnlock()
@@ -160,7 +160,7 @@ func (table *CacheTable) Delete(key interface{}) bool {
 }
 
 //获取缓存项
-func (table *CacheTable) Get(key interface{}) *CacheItem {
+func (table *CacheTable) Get(key string) *CacheItem {
 	//获取
 	table.RLock()
 	item, ok := table.items[key]
@@ -275,7 +275,7 @@ func NewCacheTable(name string) *CacheTable {
 	now := time.Now()
 	table := CacheTable{
 		name:            name,
-		items:           make(map[interface{}]*CacheItem),
+		items:           make(map[string]*CacheItem),
 		createTime:      now,
 		lastAccessTime:  now,
 		lastModifyTime:  now,

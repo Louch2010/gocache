@@ -44,6 +44,7 @@ const (
 	DATA_TYPE_SET    = "set"    //集合
 	DATA_TYPE_LIST   = "list"   //列表
 	DATA_TYPE_ZSET   = "zset"   //有序集合
+	DATA_TYPE_OBJECT = "object" //对象
 )
 
 //协议类型
@@ -65,12 +66,13 @@ const (
 
 //客户端
 type Client struct {
-	host        string   //地址
-	port        int      //端口
-	table       string   //表名
-	listenEvent []string //侦听事件
-	protocol    string   //通讯协议
-	token       string   //令牌
+	host        string           //地址
+	port        int              //端口
+	table       string           //表名
+	cacheTable  *core.CacheTable //表指针
+	listenEvent []string         //侦听事件
+	protocol    string           //通讯协议
+	token       string           //令牌
 }
 
 //响应信息
@@ -105,15 +107,18 @@ func GetServerRespMsg(code string, data interface{}, err error, client *Client) 
 
 //根据连接协议，将响应内容进行封装
 func TransferResponse(response ServerRespMsg) string {
-	protocol := response.Client.protocol
-	//终端方式
+	protocol := ""
+	if response.Client != nil {
+		protocol = response.Client.protocol
+	}
+	//终端方式：有错误，则输出错误信息，没有错误，则直接输出响应信息
 	if protocol == "" || protocol == PROTOCOL_RESPONSE_TERMINAL {
 		if response.Err != nil {
 			return response.Err.Error() + FLAG_CHAR_SOCKET_TERMINAL_RESPONSE_END
 		}
 		return toString(response.Data) + FLAG_CHAR_SOCKET_TERMINAL_RESPONSE_END
 	}
-	//JSON方式
+	//JSON方式：对响应信息进行json封装
 	if protocol == PROTOCOL_RESPONSE_JSON {
 		msg := MESSAGE_SUCCESS
 		if response.Err != nil {
@@ -140,6 +145,12 @@ func toString(v interface{}) string {
 		break
 	case int:
 		response = strconv.Itoa(conv)
+		break
+	case bool:
+		response = strconv.FormatBool(conv)
+		break
+	case float64:
+		response = strconv.FormatFloat(conv, 'E', -1, 64)
 		break
 	case *core.CacheItem:
 		if conv != nil {

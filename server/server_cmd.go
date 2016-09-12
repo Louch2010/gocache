@@ -95,11 +95,18 @@ func HandleConnectCommnd(body, token string) ServerRespMsg {
 		log.Info("协议错误：", protocol)
 		return GetServerRespMsg(MESSAGE_PROTOCOL_ERROR, "", ERROR_PROTOCOL_ERROR, nil)
 	}
+	//获取表
+	cacheTable, err := core.Cache(table)
+	if err != nil {
+		log.Error("连接时获取表失败！", err)
+		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, nil)
+	}
 	//存储连接信息
 	client := Client{
 		host:        ip,
 		port:        portInt,
 		table:       table,
+		cacheTable:  cacheTable,
 		listenEvent: strings.Split(event, ","),
 		protocol:    protocol,
 		token:       token,
@@ -115,12 +122,7 @@ func HandleDeleteCommnd(body string, client Client) ServerRespMsg {
 	if !check {
 		return resp
 	}
-	table, err := core.Cache(client.table)
-	if err != nil {
-		log.Error("执行Delete命令出错，获取表失败，表名：", client.table)
-		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, &client)
-	}
-	if table.Delete(body) {
+	if client.cacheTable.Delete(body) {
 		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, &client)
 	}
 	return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, &client)
@@ -133,12 +135,7 @@ func HandleExistCommnd(body string, client Client) ServerRespMsg {
 	if !check {
 		return resp
 	}
-	table, err := core.Cache(client.table)
-	if err != nil {
-		log.Error("执行Exist命令出错，获取表失败，表名：", client.table)
-		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, &client)
-	}
-	response := GetServerRespMsg(MESSAGE_SUCCESS, table.IsExist(body), nil, &client)
+	response := GetServerRespMsg(MESSAGE_SUCCESS, client.cacheTable.IsExist(body), nil, &client)
 	response.DataType = DATA_TYPE_BOOL
 	return response
 }
@@ -150,7 +147,13 @@ func HandleUseCommnd(body string, client Client) ServerRespMsg {
 	if !check {
 		return resp
 	}
+	cacheTable, err := core.Cache(body)
+	if err != nil {
+		log.Error("切换表时获取表失败！", err)
+		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, nil)
+	}
 	client.table = body
+	client.cacheTable = cacheTable
 	if CreateSession(client.token, client) {
 		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, &client)
 	}
@@ -195,7 +198,7 @@ func HandleShowiCommnd(body string, client Client) ServerRespMsg {
 	if len(body) == 0 { //没有请求体，则显示所有项
 		index := 1
 		for k, _ := range table.GetItems() {
-			response += "[" + strconv.Itoa(index) + "] " + k.(string) + "\r\n"
+			response += "[" + strconv.Itoa(index) + "] " + k + "\r\n"
 			index += 1
 		}
 		response += "use 'showi key' to see detail info"
@@ -204,13 +207,13 @@ func HandleShowiCommnd(body string, client Client) ServerRespMsg {
 		if item == nil {
 			return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, &client)
 		}
-		response += "key: " + item.Key().(string) + "\r\n"
+		response += "key: " + item.Key() + "\r\n"
 		response += "value: " + item.Value().(string) + "\r\n"
 		response += "liveTime: " + item.LiveTime().String() + "\r\n"
 		response += "createTime: " + goutil.DateUtil().TimeFullFormat(item.CreateTime()) + "\r\n"
 		response += "lastAccessTime: " + goutil.DateUtil().TimeFullFormat(item.LastAccessTime()) + "\r\n"
-		response += "lastModifyTime: " + goutil.DateUtil().TimeFullFormat(item.LastModifyTime()) + "\r\n"
 		response += "accessCount: " + strconv.FormatInt(item.AccessCount(), 10) + "\r\n"
+		response += "dataType: " + item.DataType() + "\r\n"
 	}
 	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, &client)
 }
@@ -228,12 +231,12 @@ func HandleInfoCommnd(body string, client Client) ServerRespMsg {
 //请求体检查
 func checkBody(body string, minBodyLen int, maxBodyLen int) (ServerRespMsg, bool) {
 	if len(body) == 0 && minBodyLen != 0 {
-		return GetServerRespMsg(MESSAGE_COMMND_PARAM_ERROR, "", ERROR_COMMND_PARAM_ERROR, nil), false
+		return GetServerRespMsg(MESSAGE_COMMAND_PARAM_ERROR, "", ERROR_COMMAND_PARAM_ERROR, nil), false
 	}
 	//参数处理
 	args := strings.Split(body, " ")
 	if len(args) < minBodyLen || len(args) > maxBodyLen {
-		return GetServerRespMsg(MESSAGE_COMMND_PARAM_ERROR, "", ERROR_COMMND_PARAM_ERROR, nil), false
+		return GetServerRespMsg(MESSAGE_COMMAND_PARAM_ERROR, "", ERROR_COMMAND_PARAM_ERROR, nil), false
 	}
 	return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, nil), true
 }

@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/louch2010/gocache/core"
 	"github.com/louch2010/gocache/log"
 )
 
@@ -22,17 +21,12 @@ func HandleSetCommnd(body string, client Client) ServerRespMsg {
 		t, err := strconv.Atoi(args[2])
 		if err != nil {
 			log.Info("参数转换错误，liveTime：", args[2], err)
-			return GetServerRespMsg(MESSAGE_COMMND_PARAM_ERROR, "", ERROR_COMMND_PARAM_ERROR, &client)
+			return GetServerRespMsg(MESSAGE_COMMAND_PARAM_ERROR, "", ERROR_COMMAND_PARAM_ERROR, &client)
 		}
 		liveTime = t
 	}
 	//增加缓存项
-	table, err := core.Cache(client.table)
-	if err != nil {
-		log.Error("执行Set命令出错，获取表失败，表名：", client.table)
-		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, &client)
-	}
-	item := table.Set(args[0], args[1], time.Duration(liveTime)*time.Second)
+	item := client.cacheTable.Set(args[0], args[1], time.Duration(liveTime)*time.Second, DATA_TYPE_STRING)
 	return GetServerRespMsg(MESSAGE_SUCCESS, item, nil, &client)
 }
 
@@ -43,15 +37,13 @@ func HandleGetCommnd(body string, client Client) ServerRespMsg {
 	if !check {
 		return resp
 	}
-	table, err := core.Cache(client.table)
-	if err != nil {
-		log.Error("执行Get命令出错，获取表失败，表名：", client.table)
-		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, &client)
-	}
-	item := table.Get(body)
-	//不存在，则设置
+	item := client.cacheTable.Get(body)
 	if item == nil {
 		return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, &client)
+	}
+	//数据类型校验
+	if item.DataType() != DATA_TYPE_STRING {
+		return GetServerRespMsg(MESSAGE_COMMAND_NOT_SUPPORT_DATA, "", ERROR_COMMAND_NOT_SUPPORT_DATA, &client)
 	}
 	return GetServerRespMsg(MESSAGE_SUCCESS, item.Value(), nil, &client)
 }
@@ -63,17 +55,16 @@ func HandleAppendCommnd(body string, client Client) ServerRespMsg {
 	if !check {
 		return resp
 	}
-	table, err := core.Cache(client.table)
-	if err != nil {
-		log.Error("执行Get命令出错，获取表失败，表名：", client.table)
-		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, &client)
-	}
 	args := strings.Split(body, " ")
-	item := table.Get(args[0])
+	item := client.cacheTable.Get(args[0])
 	//不存在，则设置
 	if item == nil {
-		table.Set(args[0], args[1], 0)
-		return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, &client)
+		client.cacheTable.Set(args[0], args[1], 0, DATA_TYPE_STRING)
+		return GetServerRespMsg(MESSAGE_SUCCESS, args[1], nil, &client)
+	}
+	//数据类型校验
+	if item.DataType() != DATA_TYPE_STRING {
+		return GetServerRespMsg(MESSAGE_COMMAND_NOT_SUPPORT_DATA, "", ERROR_COMMAND_NOT_SUPPORT_DATA, &client)
 	}
 	v := item.Value().(string) + args[1]
 	item.SetValue(v)
@@ -87,14 +78,13 @@ func HandleStrLenCommnd(body string, client Client) ServerRespMsg {
 	if !check {
 		return resp
 	}
-	table, err := core.Cache(client.table)
-	if err != nil {
-		log.Error("执行Get命令出错，获取表失败，表名：", client.table)
-		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, &client)
-	}
-	item := table.Get(body)
+	item := client.cacheTable.Get(body)
 	length := 0
 	if item != nil {
+		//数据类型校验
+		if item.DataType() != DATA_TYPE_STRING {
+			return GetServerRespMsg(MESSAGE_COMMAND_NOT_SUPPORT_DATA, "", ERROR_COMMAND_NOT_SUPPORT_DATA, &client)
+		}
 		length = len(item.Value().(string))
 	}
 	response := GetServerRespMsg(MESSAGE_SUCCESS, length, nil, &client)
@@ -109,18 +99,13 @@ func HandleSetNxCommnd(body string, client Client) ServerRespMsg {
 	if !check {
 		return resp
 	}
-	table, err := core.Cache(client.table)
-	if err != nil {
-		log.Error("执行Get命令出错，获取表失败，表名：", client.table)
-		return GetServerRespMsg(MESSAGE_ERROR, "", ERROR_SYSTEM, &client)
-	}
-	item := table.Get(body)
+	args := strings.Split(body, " ")
+	item := client.cacheTable.Get(args[0])
 	flag := false
 	//不存在，则设置
 	if item == nil {
 		flag = true
-		args := strings.Split(body, " ")
-		table.Set(args[0], args[1], 0)
+		client.cacheTable.Set(args[0], args[1], 0, DATA_TYPE_STRING)
 	}
 	response := GetServerRespMsg(MESSAGE_SUCCESS, flag, nil, &client)
 	response.DataType = DATA_TYPE_BOOL
