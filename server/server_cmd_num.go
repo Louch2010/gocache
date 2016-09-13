@@ -2,7 +2,6 @@ package server
 
 import (
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/louch2010/gocache/log"
@@ -11,11 +10,10 @@ import (
 //NSet命令处理
 func HandleNSetCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
-	resp, check := checkBody(body, 2, 3)
+	args, resp, check := initParam(body, 2, 3)
 	if !check {
 		return resp
 	}
-	args := strings.Split(body, " ")
 	var liveTime int = 0
 	if len(args) == 3 {
 		t, err := strconv.Atoi(args[2])
@@ -38,11 +36,11 @@ func HandleNSetCommnd(body string, client *Client) ServerRespMsg {
 //NGet命令处理
 func HandleNGetCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
-	resp, check := checkBody(body, 1, 1)
+	args, resp, check := initParam(body, 1, 1)
 	if !check {
 		return resp
 	}
-	item := client.cacheTable.Get(body)
+	item := client.cacheTable.Get(args[0])
 	if item == nil {
 		return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, client)
 	}
@@ -58,15 +56,15 @@ func HandleNGetCommnd(body string, client *Client) ServerRespMsg {
 //Incr命令处理
 func HandleIncrCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
-	resp, check := checkBody(body, 1, 1)
+	args, resp, check := initParam(body, 1, 1)
 	if !check {
 		return resp
 	}
-	item := client.cacheTable.Get(body)
+	item := client.cacheTable.Get(args[0])
 	var v float64 = 1
 	//不存在，则设置为0，存在增加1
 	if item == nil {
-		client.cacheTable.Set(body, v, 0, DATA_TYPE_NUMBER)
+		client.cacheTable.Set(args[0], v, 0, DATA_TYPE_NUMBER)
 	} else {
 		//数据类型校验
 		if item.DataType() != DATA_TYPE_NUMBER {
@@ -84,11 +82,10 @@ func HandleIncrCommnd(body string, client *Client) ServerRespMsg {
 //IncrBy命令处理
 func HandleIncrByCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
-	resp, check := checkBody(body, 2, 2)
+	args, resp, check := initParam(body, 2, 2)
 	if !check {
 		return resp
 	}
-	args := strings.Split(body, " ")
 	item := client.cacheTable.Get(args[0])
 	v, _ := strconv.ParseFloat(args[1], 10)
 	//不存在，则设置为0，存在增加1

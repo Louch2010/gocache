@@ -45,6 +45,8 @@ func main() {
 		return
 	}
 	log.Info("初始化缓存完成")
+	//加载持久化文件
+
 	//启动服务
 	port := conf.GetSystemConfig().MustInt("server", "port", 1334)
 	aliveTime := conf.GetSystemConfig().MustInt("server", "aliveTime", 30)

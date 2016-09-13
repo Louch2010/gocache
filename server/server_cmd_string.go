@@ -2,7 +2,6 @@ package server
 
 import (
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/louch2010/gocache/log"
@@ -11,11 +10,10 @@ import (
 //Set命令处理
 func HandleSetCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
-	resp, check := checkBody(body, 2, 3)
+	args, resp, check := initParam(body, 2, 3)
 	if !check {
 		return resp
 	}
-	args := strings.Split(body, " ")
 	var liveTime int = 0
 	if len(args) == 3 {
 		t, err := strconv.Atoi(args[2])
@@ -33,11 +31,11 @@ func HandleSetCommnd(body string, client *Client) ServerRespMsg {
 //Get命令处理
 func HandleGetCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
-	resp, check := checkBody(body, 1, 1)
+	args, resp, check := initParam(body, 1, 1)
 	if !check {
 		return resp
 	}
-	item := client.cacheTable.Get(body)
+	item := client.cacheTable.Get(args[0])
 	if item == nil {
 		return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, client)
 	}
@@ -51,11 +49,10 @@ func HandleGetCommnd(body string, client *Client) ServerRespMsg {
 //Append命令处理
 func HandleAppendCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
-	resp, check := checkBody(body, 2, 2)
+	args, resp, check := initParam(body, 2, 2)
 	if !check {
 		return resp
 	}
-	args := strings.Split(body, " ")
 	item := client.cacheTable.Get(args[0])
 	//不存在，则设置
 	if item == nil {
@@ -74,11 +71,11 @@ func HandleAppendCommnd(body string, client *Client) ServerRespMsg {
 //StrLen命令处理
 func HandleStrLenCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
-	resp, check := checkBody(body, 1, 1)
+	args, resp, check := initParam(body, 1, 1)
 	if !check {
 		return resp
 	}
-	item := client.cacheTable.Get(body)
+	item := client.cacheTable.Get(args[0])
 	length := 0
 	if item != nil {
 		//数据类型校验
@@ -95,11 +92,10 @@ func HandleStrLenCommnd(body string, client *Client) ServerRespMsg {
 //SetNx命令处理
 func HandleSetNxCommnd(body string, client *Client) ServerRespMsg {
 	//请求体校验
-	resp, check := checkBody(body, 2, 2)
+	args, resp, check := initParam(body, 2, 2)
 	if !check {
 		return resp
 	}
-	args := strings.Split(body, " ")
 	item := client.cacheTable.Get(args[0])
 	flag := false
 	//不存在，则设置
