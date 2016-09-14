@@ -224,7 +224,7 @@ func HandleShowiCommnd(body string, client *Client) ServerRespMsg {
 			return GetServerRespMsg(MESSAGE_ITEM_NOT_EXIST, "", ERROR_ITEM_NOT_EXIST, client)
 		}
 		response += "key: " + item.Key() + "\r\n"
-		response += "value: " + item.Value().(string) + "\r\n"
+		response += "value: " + toString(item) + "\r\n"
 		response += "liveTime: " + item.LiveTime().String() + "\r\n"
 		response += "createTime: " + goutil.DateUtil().TimeFullFormat(item.CreateTime()) + "\r\n"
 		response += "lastAccessTime: " + goutil.DateUtil().TimeFullFormat(item.LastAccessTime()) + "\r\n"
