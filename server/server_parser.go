@@ -98,6 +98,10 @@ func ParserRequest(request string, token string, client *Client) ServerRespMsg {
 	case REQUEST_TYPE_INFO:
 		response = HandleInfoCommnd(body, client)
 		break
+	//服务器信息
+	case REQUEST_TYPE_BGSAVE:
+		response = HandleBgSaveCommnd(body, client)
+		break
 
 	//新增（string）
 	case REQUEST_TYPE_SET:

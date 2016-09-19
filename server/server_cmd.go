@@ -7,6 +7,7 @@ import (
 
 	"github.com/louch2010/gocache/conf"
 	"github.com/louch2010/gocache/core"
+	"github.com/louch2010/gocache/gdb"
 	"github.com/louch2010/gocache/log"
 	"github.com/louch2010/goutil"
 )
@@ -240,12 +241,23 @@ func HandleInfoCommnd(body string, client *Client) ServerRespMsg {
 	if !check {
 		return resp
 	}
+	//获取默认section中的信息
 	info, _ := conf.GetSystemConfig().GetSection("")
 	response := ""
 	for k, v := range info {
 		response += k + ": " + v + "\r\n"
 	}
 	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, client)
+}
+
+//后台保存gdb文件
+func HandleBgSaveCommnd(body string, client *Client) ServerRespMsg {
+	_, resp, check := initParam(body, 0, 0)
+	if !check {
+		return resp
+	}
+	go gdb.SaveDB()
+	return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, client)
 }
 
 //初始化参数

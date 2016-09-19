@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louch2010/gocache/core"
 	"github.com/louch2010/gocache/log"
 	"github.com/louch2010/goutil"
 )
@@ -74,12 +75,24 @@ func CheckSave(dirty int, lastSave time.Time) {
 	if !open {
 		return
 	}
+	SaveDB()
 }
 
 //执行持久化操作
-func SaveDB(dirty int, lastSave time.Time) error {
+func SaveDB() error {
 	if !open {
 		return nil
 	}
+	log.Info("执行保存本地持久化gdb文件，文件路径：", filePath)
+	start := time.Now()
+	//写文件
+	tables := core.GetCacheTables()
+	err := CreateGDB(filePath, tables)
+	if err != nil {
+		return err
+	}
+	end := time.Now()
+	cost := end.Sub(start)
+	log.Info("执行保存本地持久化gdb文件完成，耗时：", cost)
 	return nil
 }

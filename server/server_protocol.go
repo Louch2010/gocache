@@ -21,6 +21,7 @@ const (
 	REQUEST_TYPE_SHOWI   = "SHOWI"   //显示项信息
 	REQUEST_TYPE_INFO    = "INFO"    //显示系统信息
 	REQUEST_TYPE_HELP    = "HELP"    //帮助
+	REQUEST_TYPE_BGSAVE  = "BGSAVE"  //后台保存gdb文件
 
 	REQUEST_TYPE_SET    = "SET"    //添加string
 	REQUEST_TYPE_GET    = "GET"    //获取string
