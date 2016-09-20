@@ -54,7 +54,7 @@ func main() {
 	err = gdb.InitGDB(dumpOn, dumpTrigger, dumpFilePath)
 	if err != nil {
 		log.Error("初始化、加载持久化文件失败！", err)
-		return
+		//return
 	}
 	//启动服务
 	port := conf.GetSystemConfig().MustInt("server", "port", 1334)

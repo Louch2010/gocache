@@ -42,14 +42,17 @@ func CreateGDB(filePath string, tables map[string]*core.CacheTable) error {
 //表转换
 func tables2Byte(tables map[string]*core.CacheTable) string {
 	content := ""
+	//表统计信息
+	content += DATABASE + goutil.StringUtil().IntToStr(len(tables), LEN_DATABASE_SIZE)
 	for name, table := range tables {
 		//系统表不缓存
 		sysTable := conf.GetSystemConfig().MustValue("server", "sysTable", "sys")
 		if name == sysTable {
 			continue
 		}
-		//表信息
-		content += DATABASE + goutil.StringUtil().IntToStr(len(name), LEN_KEY) + name
+		//表信息（表名、键值对数量）
+		content += TABLE + goutil.StringUtil().IntToStr(len(name), LEN_KEY) + name
+		content += goutil.StringUtil().IntToStr(table.ItemCount(), LEN_TABLE_SIZE)
 		for k, v := range table.GetItems() {
 			//已经过期的，则不保存
 			if v.LiveTime() > 0 && v.CreateTime().Add(v.LiveTime()).Before(time.Now()) {
