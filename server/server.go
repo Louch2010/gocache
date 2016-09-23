@@ -107,7 +107,14 @@ func handleLongConn(conn net.Conn, timeout int, token string) {
 		//检测每次Client是否有数据传来
 		go gravelChannel(line, manage)
 		//解析请求
-		response := ParserRequest(line, token, client)
+		client.token = token
+		client.reqest = splitParam(line)
+		//请求内容为空时，不处理
+		if len(client.reqest) == 0 {
+
+			continue
+		}
+		response := ParserRequest(client)
 		//将client进行缓存
 		if response.Err == nil && response.Client != nil {
 			client = response.Client
@@ -138,4 +145,45 @@ func heartBeating(conn net.Conn, manage chan string, timeout int) {
 func gravelChannel(content string, manage chan string) {
 	manage <- content
 	close(manage)
+}
+
+//解析请求参数
+func splitParam(body string) []string {
+	result := make([]string, 0)
+	body = goutil.StringUtil().TrimToEmpty(body)
+	//如果包含引号，则需要特殊处理
+	if strings.Contains(body, "\"") {
+		l := list.New()
+		open := false
+		buffer := ""
+		for _, c := range body {
+			if '"' == c {
+				if open {
+					l.PushBack(buffer)
+					buffer = ""
+				}
+				open = !open
+				continue
+			}
+			if ' ' == c && !open {
+				if len(buffer) > 0 {
+					l.PushBack(buffer)
+					buffer = ""
+				}
+				continue
+			}
+			buffer += string(c)
+		}
+		result = make([]string, l.Len())
+		var i = 0
+		for e := l.Front(); e != nil; e = e.Next() {
+			result[i] = e.Value.(string)
+			i = i + 1
+		}
+	} else {
+		body = strings.Replace(body, "  ", " ", 99)
+		result = strings.Split(body, " ")
+	}
+	log.Debug("初始化请求参数完成，请求参数为：", result, "，长度为：", len(result))
+	return result
 }

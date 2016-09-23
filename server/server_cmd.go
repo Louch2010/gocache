@@ -12,21 +12,22 @@ import (
 	"github.com/louch2010/goutil"
 )
 
+//ping命令处理
+func HandlePingCommnd(client *Client) {
+	client.response = GetServerRespMsg(MESSAGE_SUCCESS, MESSAGE_PONG, nil, client)
+}
+
 //帮助命令处理
-func HandleHelpCommnd(body string, client *Client) ServerRespMsg {
+func HandleHelpCommnd(client *Client) {
 	response := ""
 	help := conf.GetHelpConfig()
-	args, resp, check := initParam(body, 0, 1)
-	if !check {
-		return resp
-	}
-	if len(args) == 0 { //没有请求体，则显示所有命令名称
+	if len(client.reqest) == 0 { //没有请求体，则显示所有命令名称
 		for index, sec := range help.GetSectionList() {
 			response += "[" + strconv.Itoa(index+1) + "] " + sec + "\r\n"
 		}
 		response += "use 'help commnd' to see detail info"
 	} else {
-		cmd := strings.ToLower(args[0])
+		cmd := strings.ToLower(client.reqest[1])
 		sec, err := help.GetSection(cmd)
 		if err != nil {
 			response = "no help for the commnd"
@@ -37,7 +38,7 @@ func HandleHelpCommnd(body string, client *Client) ServerRespMsg {
 			}
 		}
 	}
-	return GetServerRespMsg(MESSAGE_SUCCESS, response, nil, client)
+	client.response = GetServerRespMsg(MESSAGE_SUCCESS, response, nil, client)
 }
 
 //连接命令处理connect [-t'table'] [-a'pwd'] [-i'ip'] [-p'port'] [-e'e1,e2...']

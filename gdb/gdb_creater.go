@@ -43,7 +43,7 @@ func CreateGDB(filePath string, tables map[string]*core.CacheTable) error {
 func tables2Byte(tables map[string]*core.CacheTable) string {
 	content := ""
 	//表统计信息
-	content += DATABASE + goutil.StringUtil().IntToStr(len(tables), LEN_DATABASE_SIZE)
+	content += DATABASE + goutil.StringUtil().IntToStr(len(tables)-1, LEN_DATABASE_SIZE)
 	for name, table := range tables {
 		//系统表不缓存
 		sysTable := conf.GetSystemConfig().MustValue("server", "sysTable", "sys")

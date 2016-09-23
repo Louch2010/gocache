@@ -67,13 +67,17 @@ const (
 
 //客户端
 type Client struct {
-	host        string           //地址
-	port        int              //端口
-	table       string           //表名
-	cacheTable  *core.CacheTable //表指针
-	listenEvent []string         //侦听事件
-	protocol    string           //通讯协议
-	token       string           //令牌
+	host        string                             //地址
+	port        int                                //端口
+	table       string                             //表名
+	cacheTable  *core.CacheTable                   //表指针
+	listenEvent []string                           //侦听事件
+	protocol    string                             //通讯协议
+	token       string                             //令牌
+	reqest      []string                           //请求参数
+	response    ServerRespMsg                      //响应信息
+	isLogin     bool                               //是否登录
+	handler     func(client *Client) ServerRespMsg //处理函数
 }
 
 //响应信息

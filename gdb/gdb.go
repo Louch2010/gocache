@@ -53,6 +53,7 @@ func LoadDB(path string) error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			log.Info("gdb文件不存在，无需加载：", path)
+			return nil
 		} else {
 			log.Error("加载gdb文件失败！", err)
 			return err

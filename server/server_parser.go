@@ -10,36 +10,21 @@ import (
 )
 
 //解析请求
-func ParserRequest(request string, token string, client *Client) ServerRespMsg {
-	//去除换行、空格
-	request = goutil.StringUtil().TrimToEmpty(request)
-	log.Debug("开始处理请求，token：", token, "，请求内容为：", request)
-	//请求内容为空时，不处理
-	if goutil.StringUtil().IsEmpty(request) {
-		return GetServerRespMsg(MESSAGE_SUCCESS, "", nil, nil)
-	}
-	//解析请求头、请求体
-	arr := strings.SplitN(request, " ", 2)
-	head := strings.ToUpper(goutil.StringUtil().TrimToEmpty(arr[0])) //请求头
-	body := ""                                                       //请求体
-	if len(arr) == 2 {
-		body = goutil.StringUtil().TrimToEmpty(arr[1])
-	}
-	log.Debug("请求头为：", head, "，请求体为：", body)
-	var response ServerRespMsg //响应内容
+func ParserRequest(client *Client) {
+	token := client.token
+	log.Debug("开始处理请求，token：", token, "，请求内容为：", client.reqest)
 	//会话信息校验
 	openSession := conf.GetSystemConfig().MustBool("client", "openSession", true)
 	isLogin := false
-	if len(client.token) > 0 {
-		isLogin = true
-	} else {
+	if !client.isLogin {
 		client, isLogin = GetSession(token) //尝试从cache中获取客户端信息
 	}
 	//没有登录
 	if !isLogin {
 		//需要登录，而且也不是免登录的命令
 		if openSession && !IsAnonymCommnd(head) {
-			return GetServerRespMsg(MESSAGE_COMMAND_NO_LOGIN, "", ERROR_COMMAND_NO_LOGIN, nil)
+			client.response = GetServerRespMsg(MESSAGE_COMMAND_NO_LOGIN, "", ERROR_COMMAND_NO_LOGIN, nil)
+			return
 		}
 		//模拟登录
 		if !openSession {
@@ -49,6 +34,7 @@ func ParserRequest(request string, token string, client *Client) ServerRespMsg {
 				table:      table,
 				cacheTable: cacheTable,
 				token:      token,
+				isLogin:    false,
 			}
 		}
 	}

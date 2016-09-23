@@ -103,6 +103,11 @@ func (table *CacheTable) Set(key string, value interface{}, liveTime time.Durati
 	item := NewCacheItem(key, value, liveTime, dataType)
 	return table.AddItem(key, item)
 }
+func (table *CacheTable) SetWithExpireTime(key string, value interface{}, expireTime time.Time, dataType string) *CacheItem {
+	liveTime := expireTime.Sub(time.Now())
+	item := NewCacheItem(key, value, liveTime, dataType)
+	return table.AddItem(key, item)
+}
 
 //添加缓存项，如果已经存在，会返回原缓存项，如果不存在，则返回的是nil
 func (table *CacheTable) AddItem(key string, item *CacheItem) *CacheItem {
